@@ -189,6 +189,7 @@ All bubble from the focused element, so one `document` listener works:
 | `spatial:focus` | — | after focus moved (`detail: { direction, from, source }`) |
 | `spatial:nofocustarget` | — | navigation hit the edge — hook to paginate / lazy-load |
 | `spatial:activate` | yes — suppresses the synthetic click | A button / Enter / OK pressed |
+| `spatial:activaterelease` | — | activate control released (`detail.durationMs` = hold time, for long-press) |
 | `spatial:back` | yes — `preventDefault()` = "handled" | B button / Escape / remote BACK |
 
 ## Programmatic API
@@ -221,15 +222,15 @@ score = euclideanGap                       distance between closest edges
 
 `spanOffset` measures drift to the candidate's *span* on the orthogonal
 axis — zero when the origin sits laterally inside it — so wide zones (a
-scrolled carousel band) aren't penalized for their breadth. "Aligned"
-requires the overlap to cover ≥20% of the origin's extent
-(`alignedOverlapRatio`) — a 1px graze doesn't make something "same row".
+scrolled carousel band) aren't penalized for their breadth.
 
-"Aligned" = the candidate overlaps the origin's projection on the axis
+"Aligned" means the candidate overlaps the origin's projection on the axis
 orthogonal to travel — i.e. it's in the same row (for ←/→) or column (for
-↑/↓). Aligned candidates always beat misaligned ones, which is how console
-UIs feel: pressing right stays in the row, even if a diagonal neighbor is
-closer. Both weights are tunable via the `scoring` option.
+↑/↓) — by at least 20% of the origin's extent (`alignedOverlapRatio`, so a
+1px graze doesn't count as "same row"). Aligned candidates always beat
+misaligned ones, which is how console UIs feel: pressing right stays in the
+row, even if a diagonal neighbor is closer. The weights are tunable via the
+`scoring` option.
 
 Search is **zone-scoped**, the way css-nav-1 scoped it: it starts in the
 innermost container and escalates outward through non-`contain` containers.
@@ -281,12 +282,14 @@ for a single-package repo:
 - **Releases**: Changesets — merging the auto-generated "Version Packages"
   PR publishes to npm with provenance. See [CONTRIBUTING.md](CONTRIBUTING.md).
 - `npm run ci` reproduces the full pipeline locally.
+
 ## Notes & roadmap
 
 - **Pointer harmony**: mouse clicks update spatial state automatically via
   `focusin`; no pointer adapter is needed.
-- **Shadow DOM**: navigation works within a root you pass; piercing open
-  shadow roots across components is on the roadmap.
+- **Shadow DOM**: an engine rooted inside an open shadow root works (focus
+  is resolved through `shadowRoot.activeElement`, pinned by test); piercing
+  *across* shadow boundaries from an outer root is on the roadmap.
 - **Steamworks action sets**: first-class adapter (via `steamworks.js` in
   Electron) is sketched above and slots into `InputAdapter` — planned.
 - **WebHID IR receivers**: same story — the adapter contract is the extension
