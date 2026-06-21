@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick start — spatial-nav-css</title>
+<link rel="stylesheet" href="../css/spatial.css">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: #0e141b; color: #c7d5e0;
+    font-family: system-ui, sans-serif;
+    display: grid; grid-template-columns: minmax(360px, 1fr) minmax(420px, 600px);
+    gap: 36px; padding: 28px 40px 40px; align-content: start;
+  }
+  header { grid-column: 1 / -1; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  h1 span { color: #1a9fff; }
+  .sub { font-size: 13px; opacity: 0.65; margin: 0; max-width: 720px; line-height: 1.5; }
+
+  /* ---- the live app (left column) — exactly the markup shown on the right ---- */
+  .app { display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-content: start; }
+  .app nav { display: flex; flex-direction: column; gap: 6px; }
+  .app nav button {
+    background: #1b2838; border: 0; color: inherit; text-align: left;
+    padding: 10px 12px; border-radius: 6px; font-size: 13px;
+  }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .card {
+    height: 90px; border-radius: 8px; padding: 10px;
+    display: grid; align-content: end; font-size: 13px;
+    background: linear-gradient(160deg, #2a475e, #1b2838);
+  }
+  #status {
+    grid-column: 1 / -1; min-height: 1.6em;
+    font: 12px/1.6 ui-monospace, monospace; opacity: 0.8;
+  }
+
+  /* ---- the lesson (right column) ---- */
+  .steps { display: grid; gap: 18px; align-content: start; }
+  .step h2 { font-size: 13px; margin: 0 0 6px; }
+  .step h2 b { color: #1a9fff; margin-right: 6px; }
+  .step p { font-size: 12px; opacity: 0.65; margin: 0 0 8px; line-height: 1.5; }
+  pre {
+    margin: 0; padding: 12px 14px; border-radius: 8px;
+    background: #11161c; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    font: 12px/1.65 ui-monospace, 'SF Mono', Menlo, monospace;
+    overflow-x: auto; color: #aebfcc;
+  }
+  pre i { font-style: normal; opacity: 0.45; }       /* comments */
+  pre b { font-weight: 400; color: #6fc1ff; }        /* the spatial bits */
+  kbd { background: #1b2838; border-radius: 4px; padding: 1px 6px; font: 11px ui-monospace, monospace; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>spatial-nav</span> quick start</h1>
+  <p class="sub">
+    The pane on the left is live — drive it with <kbd>←↑↓→</kbd> / a gamepad,
+    <kbd>Enter</kbd>/Ⓐ to activate, <kbd>Esc</kbd>/Ⓑ for the hub. The three
+    steps on the right are the <em>entire</em> code behind it.
+  </p>
+</header>
+
+<!-- ======== live demo — this markup is the same markup shown in step 1 ======== -->
+<div class="app">
+  <nav data-spatial-container="remember" aria-label="Sections">
+    <button data-spatial-autofocus>Home</button>
+    <button>Library</button>
+    <button>Settings</button>
+  </nav>
+
+  <div class="grid" data-spatial-container="wrap remember">
+    <div class="card spatial-pop" data-focusable>Card 1</div>
+    <div class="card spatial-pop" data-focusable>Card 2</div>
+    <div class="card spatial-pop" data-focusable>Card 3</div>
+    <div class="card spatial-pop" data-focusable>Card 4</div>
+    <div class="card spatial-pop" data-focusable>Card 5</div>
+    <div class="card spatial-pop" data-focusable>Card 6</div>
+  </div>
+
+  <div id="status">spatial events appear here…</div>
+</div>
+
+<!-- ======== the lesson ======== -->
+<div class="steps">
+  <div class="step">
+    <h2><b>1</b> Mark up containers and focusables — plain HTML</h2>
+    <p>Native buttons/links/inputs already participate. Add
+       <code>data-focusable</code> to let plain divs (cards, tiles) join in.</p>
+<pre>&lt;link rel="stylesheet" href="spatial-nav-css/spatial.css"&gt;
+
+&lt;nav <b>data-spatial-container="remember"</b>&gt;   <i>&lt;!-- restores focus on re-entry --&gt;</i>
+  &lt;button <b>data-spatial-autofocus</b>&gt;Home&lt;/button&gt;
+  &lt;button&gt;Library&lt;/button&gt;
+  &lt;button&gt;Settings&lt;/button&gt;
+&lt;/nav&gt;
+
+&lt;div class="grid" <b>data-spatial-container="wrap remember"</b>&gt;
+  &lt;div class="card spatial-pop" <b>data-focusable</b>&gt;Card 1&lt;/div&gt;
+  <i>…</i>
+&lt;/div&gt;</pre>
+  </div>
+
+  <div class="step">
+    <h2><b>2</b> Start the engine — three lines of JS</h2>
+    <p>Keyboard arrows and every connected gamepad now move focus spatially.
+       React to navigation through bubbling DOM events.</p>
+<pre><b>import { createSpatialNavigation } from 'spatial-nav-css'</b>
+
+const nav = createSpatialNavigation({ autofocus: true })
+nav.start()
+
+<i>// hook in anywhere — events bubble like clicks:</i>
+document.addEventListener(<b>'spatial:focus'</b>,    e =&gt; { <i>/* e.detail.source */</i> })
+document.addEventListener(<b>'spatial:activate'</b>, e =&gt; { <i>/* Enter / Ⓐ */</i> })
+document.addEventListener(<b>'spatial:back'</b>,     e =&gt; { <i>/* Esc / Ⓑ */</i> })</pre>
+  </div>
+
+  <div class="step">
+    <h2><b>3</b> (Optional) Configure through CSS instead</h2>
+    <p>Every knob is also a custom property, so it can live in your stylesheet,
+       a media query, or a theme. Data attributes win when both are set.</p>
+<pre>.modal    { <b>--spatial-container: contain;</b> }        <i>/* trap focus inside  */</i>
+.carousel { <b>--spatial-container: wrap remember;</b> }
+.bottom-row button { <b>--nav-down: none;</b> }           <i>/* block a direction   */</i>
+.search   { <b>--nav-up: "#logo";</b> }                   <i>/* explicit override   */</i>
+
+:root {  <i>/* theme the shipped focus ring */</i>
+  <b>--spatial-focus-ring-color:</b> #1a9fff;
+  <b>--spatial-focus-ring-width:</b> 3px;
+}</pre>
+  </div>
+</div>
+
+<script type="module">
+  import { createSpatialNavigation } from '../dist/index.js'
+
+  const nav = createSpatialNavigation({ autofocus: true })
+  nav.start()
+
+  const status = document.getElementById('status')
+  document.addEventListener('spatial:focus', (e) => {
+    status.textContent = `spatial:focus → ${e.target.textContent.trim()}  [source: ${e.detail.source}]`
+  })
+  document.addEventListener('spatial:activate', (e) => {
+    status.textContent = `spatial:activate → ${e.target.textContent.trim()}`
+  })
+  document.addEventListener('spatial:back', (e) => {
+    if (e.defaultPrevented) return
+    e.preventDefault()
+    location.href = 'index.html'
+  })
+</script>
+</body>
+</html>

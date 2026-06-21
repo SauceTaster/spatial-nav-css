@@ -1,0 +1,45 @@
+name: Bug report
+description: Navigation went somewhere wrong, or the API misbehaved
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: spatial-nav-css@0.2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - Core engine (geometry / containers / focus)
+        - Keyboard adapter
+        - Gamepad adapter
+        - React / React Aria
+        - Vue
+        - Svelte
+        - Web Components
+        - CSS / styling
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: |
+        Smallest layout + the key/stick presses that misbehave. For engine
+        bugs, ids + rects (left, top, width, height) and the expected vs
+        actual focus target are ideal — that maps 1:1 onto our test harness.
+      placeholder: |
+        layout: a [0,0,80,80], b [100,0,80,80]
+        focus a, press right
+        expected: b   actual: nothing
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: Chrome 132 / Steam Deck, Xbox controller via Gamepad API

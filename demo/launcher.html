@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>spatial-nav-css — demo</title>
+<link rel="stylesheet" href="../css/spatial.css">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0e141b;
+    --panel: #1b2838;
+    --panel-2: #2a475e;
+    --text: #c7d5e0;
+    --accent: #1a9fff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: grid;
+    grid-template-columns: 220px 1fr 280px;
+    grid-template-rows: 64px 1fr;
+    grid-template-areas: "top top top" "side main log";
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  header {
+    grid-area: top;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+    background: var(--panel);
+  }
+  header .tab {
+    background: none;
+    border: 0;
+    color: var(--text);
+    font-size: 15px;
+    padding: 8px 14px;
+    border-radius: 6px;
+  }
+  header .pad-status { margin-left: auto; font-size: 13px; opacity: 0.7; }
+
+  nav.sidebar {
+    grid-area: side;
+    background: var(--panel);
+    padding: 16px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  nav.sidebar button {
+    background: none;
+    border: 0;
+    color: var(--text);
+    text-align: left;
+    font-size: 14px;
+    padding: 10px 12px;
+    border-radius: 6px;
+  }
+
+  main {
+    grid-area: main;
+    overflow-y: auto;
+    padding: 24px;
+  }
+  h2 { font-size: 15px; font-weight: 600; margin: 24px 0 10px; opacity: 0.85; }
+  .row {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding: 8px 4px 14px;
+  }
+  .card {
+    flex: 0 0 150px;
+    height: 200px;
+    border-radius: 8px;
+    background: linear-gradient(160deg, var(--panel-2), var(--panel));
+    display: flex;
+    align-items: flex-end;
+    padding: 12px;
+    font-size: 13px;
+  }
+  .card.wide { flex-basis: 260px; height: 130px; }
+
+  aside.log {
+    grid-area: log;
+    background: var(--panel);
+    padding: 16px;
+    font: 12px/1.6 ui-monospace, monospace;
+    overflow-y: auto;
+  }
+  aside.log h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+  aside.log div { opacity: 0.8; }
+
+  .hint { font-size: 12px; opacity: 0.55; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<header data-spatial-container="wrap">
+  <strong style="color:var(--accent)">spatial-nav</strong>
+  <button class="tab spatial-pop" data-spatial-autofocus>Store</button>
+  <button class="tab spatial-pop">Library</button>
+  <button class="tab spatial-pop">Community</button>
+  <button class="tab spatial-pop">Profile</button>
+  <span class="pad-status" id="pad-status">no gamepad — use arrow keys / Enter / Esc</span>
+</header>
+
+<nav class="sidebar" data-spatial-container="remember">
+  <button class="spatial-pop">Home</button>
+  <button class="spatial-pop">New Releases</button>
+  <button class="spatial-pop">Top Sellers</button>
+  <button class="spatial-pop">Categories</button>
+  <button class="spatial-pop">Wishlist</button>
+  <button class="spatial-pop" data-nav-down="none">Settings</button>
+</nav>
+
+<main>
+  <h2>Featured <span class="hint">(row wraps around)</span></h2>
+  <div class="row" data-spatial-container="wrap remember">
+    <div class="card wide spatial-pop" data-focusable>Half-Loop 3</div>
+    <div class="card wide spatial-pop" data-focusable>Portal Reloaded</div>
+    <div class="card wide spatial-pop" data-focusable>Deck Verified</div>
+    <div class="card wide spatial-pop" data-focusable>Proton Prime</div>
+  </div>
+
+  <h2>New &amp; trending <span class="hint">(plain group — focus exits where geometry says)</span></h2>
+  <div class="row" data-spatial-container>
+    <div class="card spatial-pop" data-focusable>Card 1</div>
+    <div class="card spatial-pop" data-focusable>Card 2</div>
+    <div class="card spatial-pop" data-focusable>Card 3</div>
+    <div class="card spatial-pop" data-focusable>Card 4</div>
+    <div class="card spatial-pop" data-focusable>Card 5</div>
+    <div class="card spatial-pop" data-focusable>Card 6</div>
+  </div>
+
+  <h2>Remembers its column <span class="hint">(re-enter this section: focus restores)</span></h2>
+  <div class="row" data-spatial-container="remember">
+    <div class="card spatial-pop" data-focusable>Slot A</div>
+    <div class="card spatial-pop" data-focusable>Slot B</div>
+    <div class="card spatial-pop" data-focusable>Slot C</div>
+    <div class="card spatial-pop" data-focusable>Slot D</div>
+  </div>
+</main>
+
+<aside class="log">
+  <h3>Events</h3>
+  <div class="hint" style="margin-bottom:8px">press <strong>D</strong> — debug overlay (the engine's view)</div>
+  <div id="log"></div>
+</aside>
+
+<script type="module">
+  import { createSpatialNavigation } from '../dist/index.js'
+  import { attachDebugOverlay } from '../dist/debug/index.js'
+
+  const nav = createSpatialNavigation({ autofocus: true })
+  nav.start()
+
+  // D toggles the visual debug overlay: cyan focusables (indexed),
+  // dashed-orange containers (with tokens), red current focus.
+  let overlay = null
+  window.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() !== 'd' || e.repeat) return
+    if (overlay) { overlay.detach(); overlay = null; line('debug overlay off') }
+    else { overlay = attachDebugOverlay(nav); line('debug overlay on') }
+  })
+
+  const log = document.getElementById('log')
+  const line = (msg) => {
+    const el = document.createElement('div')
+    el.textContent = msg
+    log.prepend(el)
+    while (log.children.length > 40) log.lastChild.remove()
+  }
+
+  document.addEventListener('spatial:focus', (e) => {
+    const t = e.target
+    line(`focus → ${t.textContent.trim() || t.tagName.toLowerCase()} [${e.detail.source}]`)
+  })
+  document.addEventListener('spatial:activate', (e) => {
+    line(`activate → ${e.target.textContent.trim()}`)
+  })
+  document.addEventListener('spatial:back', () => line('back'))
+  document.addEventListener('spatial:nofocustarget', (e) => {
+    line(`edge: nothing ${e.detail.direction} of here`)
+  })
+
+  const padStatus = document.getElementById('pad-status')
+  window.addEventListener('gamepadconnected', (e) => {
+    padStatus.textContent = `🎮 ${e.gamepad.id.slice(0, 40)}`
+  })
+  window.addEventListener('gamepaddisconnected', () => {
+    padStatus.textContent = 'no gamepad — use arrow keys / Enter / Esc'
+  })
+</script>
+</body>
+</html>

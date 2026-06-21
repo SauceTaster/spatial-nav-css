@@ -1,0 +1,136 @@
+/**
+ * spatial-nav-css — base stylesheet
+ *
+ * Provides the focus-ring treatment and the custom properties the engine
+ * reads. Everything is themeable via the --spatial-* variables below.
+ *
+ * Engine-read properties (set them on your own elements):
+ *   --nav-up / --nav-down / --nav-left / --nav-right : "<selector>" | none
+ *   --spatial-container : contain | wrap | remember   (space-separated)
+ *   --spatial-default-focus : auto
+ */
+
+/*
+ * Engine-read properties are registered as non-inheriting: custom properties
+ * inherit by default, which would otherwise turn every descendant of a
+ * --spatial-container element into a container itself. (In browsers without
+ * @property support, prefer the data-attribute forms for these.)
+ */
+@property --spatial-container {
+  syntax: "*";
+  inherits: false;
+}
+@property --spatial-default-focus {
+  syntax: "*";
+  inherits: false;
+}
+@property --nav-up {
+  syntax: "*";
+  inherits: false;
+}
+@property --nav-down {
+  syntax: "*";
+  inherits: false;
+}
+@property --nav-left {
+  syntax: "*";
+  inherits: false;
+}
+@property --nav-right {
+  syntax: "*";
+  inherits: false;
+}
+
+:root {
+  --spatial-focus-ring-color: #1a9fff; /* Steam-y blue */
+  --spatial-focus-ring-glow: rgba(26, 159, 255, 0.45);
+  --spatial-focus-ring-width: 3px;
+  --spatial-focus-ring-offset: 2px;
+  --spatial-focus-ring-radius: 6px;
+  --spatial-focus-transition: 120ms ease-out;
+  --spatial-scroll-margin: 24px;
+}
+
+/*
+ * The engine toggles .spatial-focused on the current element. Gamepad- and
+ * remote-driven focus is programmatic, so :focus-visible alone is not
+ * reliable — the class is the source of truth, native :focus-visible is
+ * kept as a fallback for plain keyboard tabbing.
+ */
+.spatial-focused,
+[data-focusable]:focus-visible {
+  outline: var(--spatial-focus-ring-width) solid var(--spatial-focus-ring-color);
+  outline-offset: var(--spatial-focus-ring-offset);
+  border-radius: var(--spatial-focus-ring-radius);
+  box-shadow:
+    0 0 0 var(--spatial-focus-ring-offset) transparent,
+    0 0 18px var(--spatial-focus-ring-glow);
+  transition:
+    outline-color var(--spatial-focus-transition),
+    box-shadow var(--spatial-focus-transition),
+    transform var(--spatial-focus-transition);
+  z-index: 1;
+}
+
+/* Don't double up rings on elements the engine is already decorating. */
+.spatial-focused:focus,
+.spatial-focused:focus-visible {
+  outline: var(--spatial-focus-ring-width) solid var(--spatial-focus-ring-color);
+}
+
+/* Opt-in focusables (cards, tiles) shouldn't show a text cursor. */
+[data-focusable] {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Keep focused elements clear of scroll-container edges. */
+.spatial-focused,
+[data-focusable] {
+  scroll-margin: var(--spatial-scroll-margin);
+}
+
+/* Subtle Panorama-style "pop" on focus. Opt in with .spatial-pop. */
+.spatial-pop.spatial-focused {
+  transform: scale(1.04);
+}
+
+/*
+ * spatialAlert() / spatialConfirm() dialogs. Deliberately minimal — colors
+ * come from the page's color-scheme; override via .spatial-dialog.
+ */
+.spatial-dialog {
+  border: none;
+  border-radius: var(--spatial-focus-ring-radius);
+  padding: 1.25rem 1.5rem;
+  max-width: 28rem;
+}
+.spatial-dialog::backdrop {
+  background: rgb(0 0 0 / 0.55);
+}
+.spatial-dialog-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05em;
+}
+.spatial-dialog-message {
+  margin: 0;
+}
+.spatial-dialog-buttons {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+.spatial-dialog-buttons button {
+  padding: 0.45em 1.3em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spatial-focused,
+  [data-focusable]:focus-visible {
+    transition: none;
+  }
+  .spatial-pop.spatial-focused {
+    transform: none;
+  }
+}

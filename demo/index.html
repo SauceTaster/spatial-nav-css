@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>spatial-nav-css — demos</title>
+<link rel="stylesheet" href="../css/spatial.css">
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(1200px 600px at 50% -10%, #16202b, #0b0f14);
+    color: #c7d5e0;
+    font-family: system-ui, sans-serif;
+    display: grid;
+    place-content: center;
+    gap: 28px;
+    padding: 40px;
+  }
+  header { text-align: center; }
+  h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: 0.02em; }
+  h1 span { color: #1a9fff; }
+  p { margin: 0; font-size: 13px; opacity: 0.6; }
+  main {
+    display: grid;
+    grid-template-columns: repeat(5, 208px);
+    gap: 16px;
+  }
+  @media (max-width: 1180px) { main { grid-template-columns: repeat(3, 220px); } }
+  @media (max-width: 780px)  { main { grid-template-columns: repeat(2, 1fr); } }
+  a.tile {
+    display: grid;
+    align-content: end;
+    gap: 6px;
+    height: 150px;
+    padding: 16px;
+    border-radius: 12px;
+    text-decoration: none;
+    color: inherit;
+    background: linear-gradient(165deg, var(--c1), var(--c2));
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+  a.tile strong { font-size: 16px; }
+  a.tile small { font-size: 12px; opacity: 0.75; line-height: 1.4; }
+  .glyph { font-size: 26px; }
+  footer { text-align: center; font-size: 12px; opacity: 0.5; }
+  kbd {
+    background: #1b2838; border-radius: 4px; padding: 1px 6px;
+    font-family: inherit; font-size: 11px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>spatial-nav</span> demo gallery</h1>
+  <p>Every page below is driven by the same spatial navigation engine.</p>
+</header>
+
+<main data-spatial-container="wrap">
+  <a class="tile spatial-pop" href="quickstart.html" data-spatial-autofocus style="--c1:#0f3050; --c2:#0a1828">
+    <span class="glyph">🧭</span>
+    <strong>Start Here</strong>
+    <small>The whole API in three steps — live UI on the left, its code on the right</small>
+  </a>
+  <a class="tile spatial-pop" href="toolkit.html" style="--c1:#2c1a45; --c2:#150d22">
+    <span class="glyph">🛠️</span>
+    <strong>Production Toolkit</strong>
+    <small>spatialConfirm dialogs, long-press, auto-restore, throttle, debug overlay</small>
+  </a>
+  <a class="tile spatial-pop" href="media-center.html" style="--c1:#3b2c10; --c2:#1c1710">
+    <span class="glyph">🎬</span>
+    <strong>Media Center</strong>
+    <small>Plex-style rails, hero billboard, settings modal with traps &amp; sliders</small>
+  </a>
+  <a class="tile spatial-pop" href="emulator.html" style="--c1:#2c1038; --c2:#140a1c">
+    <span class="glyph">👾</span>
+    <strong>Retro Emulator</strong>
+    <small>EmulationStation-style system list, game grid, live metadata</small>
+  </a>
+  <a class="tile spatial-pop" href="vr.html" style="--c1:#0e2c3a; --c2:#081720">
+    <span class="glyph">🥽</span>
+    <strong>VR Panels</strong>
+    <small>Floating perspective panels — navigation across 3D transforms</small>
+  </a>
+  <a class="tile spatial-pop" href="controller.html" style="--c1:#103224; --c2:#0a1a13">
+    <span class="glyph">🎮</span>
+    <strong>Controller UI</strong>
+    <small>Console settings rows, live gamepad tester, per-device glyphs</small>
+  </a>
+  <a class="tile spatial-pop" href="launcher.html" style="--c1:#1b2c3e; --c2:#0e1722">
+    <span class="glyph">🚀</span>
+    <strong>Game Launcher</strong>
+    <small>The original Steam-style demo: zones, memory, wrap, event log</small>
+  </a>
+  <a class="tile spatial-pop" href="elements.html" style="--c1:#332433; --c2:#191119">
+    <span class="glyph">🧩</span>
+    <strong>Web Components</strong>
+    <small>&lt;spatial-nav&gt; islands — zero-framework declarative usage</small>
+  </a>
+  <a class="tile spatial-pop" href="virtual.html" style="--c1:#13303a; --c2:#0a181f">
+    <span class="glyph">🌀</span>
+    <strong>Virtualized List</strong>
+    <small>10,000 items, ~14 in the DOM — navigation continues past the window</small>
+  </a>
+  <a class="tile spatial-pop" href="css-conformance.html" style="--c1:#2c2c12; --c2:#17170a">
+    <span class="glyph">🧪</span>
+    <strong>CSS Conformance</strong>
+    <small>Self-running cascade checks: @property, @media, var(), runtime changes</small>
+  </a>
+</main>
+
+<footer>
+  <kbd>←↑↓→</kbd> / left stick / d-pad to move &nbsp; <kbd>Enter</kbd> / Ⓐ to open &nbsp; <kbd>Esc</kbd> / Ⓑ for back<br>
+  Every page is one self-contained HTML file — <em>View Source is the tutorial</em>.
+</footer>
+
+<script type="module">
+  import { createSpatialNavigation } from '../dist/index.js'
+  const nav = createSpatialNavigation({ autofocus: true })
+  nav.start()
+  // Activating a tile follows its link (synthetic click does this natively).
+</script>
+</body>
+</html>

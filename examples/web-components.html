@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web Components — spatial-nav-css</title>
+<style>
+  spatial-container { display: flex; gap: 12px; flex-wrap: wrap; }
+  .wc-tile { width: 120px; height: 80px; border-radius: 8px; display: grid; place-content: center;
+    font-size: 13px; background: linear-gradient(160deg, #2a475e, #1b2838); cursor: pointer; }
+  #log { font: 12px ui-monospace, monospace; opacity: 0.75; min-height: 1.5em; }
+</style>
+</head>
+<body>
+<div class="ex-head">
+  <a class="back" href="/">← all examples</a>
+  <h1><span class="lib">🧩 Web Components</span></h1>
+  <p>Pure HTML: a <code>&lt;spatial-nav&gt;</code> island with two
+     <code>&lt;spatial-container&gt;</code> rows. No framework. Drive with <kbd>←↑↓→</kbd>.</p>
+</div>
+
+<div id="app">
+  <spatial-nav auto-focus>
+    <div class="ex-body">
+      <div class="ex-panel">
+        <h2>Tabs — a remember zone</h2>
+        <spatial-container remember>
+          <button class="btn" data-spatial-autofocus>Store</button>
+          <button class="btn">Library</button>
+          <button class="btn">Community</button>
+        </spatial-container>
+      </div>
+      <div class="ex-panel">
+        <h2>Cards — wrap + remember</h2>
+        <spatial-container wrap remember>
+          <div class="wc-tile" data-focusable>One</div>
+          <div class="wc-tile" data-focusable>Two</div>
+          <div class="wc-tile" data-focusable>Three</div>
+          <div class="wc-tile" data-focusable>Four</div>
+        </spatial-container>
+      </div>
+      <p id="log"></p>
+    </div>
+  </spatial-nav>
+</div>
+
+<script type="module" src="/src/web-components/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controller UI — spatial-nav-css</title>
+<link rel="stylesheet" href="../css/spatial.css">
+<style>
+  :root {
+    color-scheme: dark;
+    --spatial-focus-ring-color: #4ade80;
+    --spatial-focus-ring-glow: rgba(74, 222, 128, 0.4);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; height: 100vh; overflow: hidden;
+    background: linear-gradient(170deg, #0c1410, #070b09 70%);
+    color: #d9e8de; font-family: system-ui, sans-serif;
+    display: grid; grid-template-columns: 1fr 300px; grid-template-rows: 60px 1fr;
+    grid-template-areas: "head head" "rows pad";
+  }
+  header { grid-area: head; display: flex; align-items: center; padding: 0 24px; gap: 14px; border-bottom: 1px solid #1d2b22; }
+  header h1 { font-size: 16px; margin: 0; }
+  header .src { margin-left: auto; font-size: 12px; opacity: 0.7; }
+
+  .rows { grid-area: rows; overflow-y: auto; padding: 20px 24px; display: grid; gap: 8px; align-content: start; }
+  .rows h2 { font-size: 12px; letter-spacing: 0.12em; opacity: 0.55; margin: 12px 0 4px; }
+  .row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 13px 16px; border-radius: 10px; font-size: 14px;
+    background: rgba(255,255,255,0.035);
+  }
+  .row .val { margin-left: auto; opacity: 0.75; font-size: 13px; display: flex; gap: 6px; align-items: center; }
+  .chip {
+    display: inline-grid; place-content: center; min-width: 22px; height: 22px;
+    border-radius: 50%; background: #1d2b22; font-size: 11px; padding: 0 4px;
+  }
+  .row input[type="range"] { width: 140px; accent-color: #4ade80; }
+
+  /* glyph swapping by last input source */
+  body[data-source="gamepad"] .kbd-hint { display: none }
+  body:not([data-source="gamepad"]) .pad-hint { display: none }
+
+  .pad { grid-area: pad; border-left: 1px solid #1d2b22; padding: 18px; font-size: 12px; display: grid; gap: 12px; align-content: start; }
+  .pad h2 { font-size: 12px; letter-spacing: 0.12em; opacity: 0.55; margin: 0; }
+  .pad .name { font-size: 12px; opacity: 0.8; min-height: 28px; }
+  .btn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .btn {
+    height: 30px; border-radius: 6px; display: grid; place-content: center;
+    background: #14201a; font-size: 10px; opacity: 0.8;
+  }
+  .btn.on { background: #4ade80; color: #06130b; font-weight: 700; }
+  .sticks { display: flex; gap: 14px; justify-content: center; }
+  .stick { width: 84px; height: 84px; border-radius: 50%; background: #14201a; position: relative; }
+  .stick i {
+    position: absolute; width: 22px; height: 22px; border-radius: 50%;
+    background: #4ade80; left: calc(50% - 11px + var(--x, 0) * 28px); top: calc(50% - 11px + var(--y, 0) * 28px);
+  }
+  .footer-hint { font-size: 11px; opacity: 0.5; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚙ System Settings</h1>
+  <span class="src">last input: <strong id="src">keyboard</strong></span>
+</header>
+
+<main class="rows" data-spatial-container="remember">
+  <h2>ACCESSIBILITY</h2>
+  <div class="row spatial-pop" data-focusable data-spatial-autofocus>
+    UI scale
+    <span class="val"><input type="range" min="80" max="140" value="100" tabindex="-1"></span>
+  </div>
+  <div class="row spatial-pop" data-focusable>
+    Rumble intensity
+    <span class="val"><input type="range" min="0" max="100" value="70" tabindex="-1"></span>
+  </div>
+
+  <h2>BINDINGS</h2>
+  <div class="row spatial-pop" data-focusable data-action="accept">
+    Accept
+    <span class="val"><span class="pad-hint chip">Ⓐ</span><span class="kbd-hint chip">↵</span></span>
+  </div>
+  <div class="row spatial-pop" data-focusable data-action="back">
+    Back / Cancel
+    <span class="val"><span class="pad-hint chip">Ⓑ</span><span class="kbd-hint chip">Esc</span></span>
+  </div>
+  <div class="row spatial-pop" data-focusable data-action="menu">
+    Quick menu
+    <span class="val"><span class="pad-hint chip">☰</span><span class="kbd-hint chip">M</span></span>
+  </div>
+
+  <h2>SYSTEM</h2>
+  <div class="row spatial-pop" data-focusable>Theme <span class="val">Forest dusk ▸</span></div>
+  <div class="row spatial-pop" data-focusable>Language <span class="val">English ▸</span></div>
+  <div class="row spatial-pop" data-focusable data-nav-down="none">About <span class="val">v0.2.0 ▸</span></div>
+</main>
+
+<aside class="pad">
+  <h2>CONTROLLER TESTER</h2>
+  <div class="name" id="pad-name">No gamepad detected — press any button on a controller.</div>
+  <div class="sticks">
+    <div class="stick"><i id="ls"></i></div>
+    <div class="stick"><i id="rs"></i></div>
+  </div>
+  <div class="btn-grid" id="buttons"></div>
+  <div class="footer-hint">
+    The sliders adjust with ◀▶ while focused; ▲▼ keep navigating.<br>Esc/Ⓑ returns to the hub.
+  </div>
+</aside>
+
+<script type="module">
+  import { createSpatialNavigation } from '../dist/index.js'
+
+  const nav = createSpatialNavigation({ autofocus: true })
+  nav.start()
+
+  // Track the device driving navigation → swap binding glyphs.
+  document.addEventListener('spatial:focus', (e) => {
+    document.body.dataset.source = e.detail.source
+    document.getElementById('src').textContent = e.detail.source
+  })
+
+  // Rows that wrap a slider forward left/right to it while focused.
+  window.addEventListener('keydown', (e) => {
+    const focused = nav.getFocused()
+    const slider = focused?.querySelector('input[type="range"]')
+    if (!slider) return
+    if (e.key === 'ArrowLeft') { slider.stepDown(); e.stopImmediatePropagation(); e.preventDefault() }
+    if (e.key === 'ArrowRight') { slider.stepUp(); e.stopImmediatePropagation(); e.preventDefault() }
+  }, { capture: true })
+
+  document.addEventListener('spatial:back', (e) => {
+    if (e.defaultPrevented) return // a dialog or other layer already handled it
+    e.preventDefault()
+    location.href = 'index.html'
+  })
+
+  // --- live controller tester (independent of the nav engine) ---
+  const LABELS = ['A','B','X','Y','LB','RB','LT','RT','Sel','St','L3','R3','▲','▼','◀','▶','⌂']
+  const btnGrid = document.getElementById('buttons')
+  const cells = LABELS.map((l) => {
+    const d = document.createElement('div')
+    d.className = 'btn'; d.textContent = l
+    btnGrid.appendChild(d)
+    return d
+  })
+  const padName = document.getElementById('pad-name')
+  const ls = document.getElementById('ls'), rs = document.getElementById('rs')
+
+  function pollPads() {
+    const pad = [...(navigator.getGamepads?.() ?? [])].find((p) => p?.connected)
+    if (pad) {
+      padName.textContent = pad.id.slice(0, 60)
+      cells.forEach((c, i) => {
+        c.classList.toggle('on', !!pad.buttons[i]?.pressed)
+      })
+      ls.style.setProperty('--x', pad.axes[0] ?? 0); ls.style.setProperty('--y', pad.axes[1] ?? 0)
+      rs.style.setProperty('--x', pad.axes[2] ?? 0); rs.style.setProperty('--y', pad.axes[3] ?? 0)
+    }
+    requestAnimationFrame(pollPads)
+  }
+  pollPads()
+</script>
+</body>
+</html>

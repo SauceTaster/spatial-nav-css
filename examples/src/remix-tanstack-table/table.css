@@ -1,0 +1,10 @@
+.grid-table { border-collapse: separate; border-spacing: 6px; width: 100%; }
+.grid-table th { text-align: left; }
+.th-sort {
+  background: none; border: 0; color: var(--text); opacity: 0.7;
+  font: inherit; font-size: 12px; letter-spacing: 0.04em; cursor: pointer; padding: 4px 6px;
+}
+.grid-cell {
+  background: var(--panel-2); border-radius: 6px; padding: 10px 14px; font-size: 13px;
+  cursor: pointer; user-select: none;
+}

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSS conformance — spatial-nav-css</title>
+<link rel="stylesheet" href="../css/spatial.css">
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 24px; background: #0e141b; color: #c7d5e0; font: 14px/1.6 system-ui, sans-serif; }
+  h1 { font-size: 16px; }
+  table { border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+  td { padding: 4px 14px 4px 0; }
+  .pass { color: #4ade80; } .fail { color: #f87171; font-weight: 700; }
+  #fixture { position: absolute; top: 400px; left: 24px; display: flex; gap: 12px; }
+  #fixture button { width: 80px; height: 60px; }
+
+  /* --- the cascade under test --- */
+  .css-override { --nav-right: "#target"; }
+  .css-blocked  { --nav-down: none; }
+  .indirect     { --hop: "#target"; --nav-left: var(--hop); }
+  .zone         { --spatial-container: contain; }
+  @media (min-width: 1px) { .mq { --nav-up: "#target"; } }
+  .toggle-on    { --nav-right: "#target"; }
+</style>
+</head>
+<body>
+<h1>Real-browser CSS conformance — things jsdom cannot verify</h1>
+<p>Self-running. Each row exercises the cascade path the engine reads via
+   <code>getComputedStyle</code>. JSON results in <code>window.__cssConformance</code>.</p>
+<table id="results"></table>
+
+<div id="fixture">
+  <button type="button" id="origin" class="css-override css-blocked indirect mq">origin</button>
+  <button type="button" id="near">near</button>
+  <button type="button" id="target">target</button>
+  <div class="zone" id="zone">
+    <button type="button" id="z-child">child</button>
+    <div><button type="button" id="z-grandchild">grandchild</button></div>
+  </div>
+</div>
+
+<!-- No data-spatial-container on purpose: native top-layer semantics only. -->
+<dialog id="modal">
+  <button type="button" id="m1">one</button>
+  <button type="button" id="m2">two</button>
+</dialog>
+
+<script type="module">
+  import { SpatialEngine, readNavConfig, isElementVisible } from '../dist/index.js'
+
+  const engine = new SpatialEngine({})
+  const $ = (id) => document.getElementById(id)
+  const results = []
+  const check = (name, actual, expected) => {
+    results.push({ name, pass: actual === expected, actual: String(actual), expected: String(expected) })
+  }
+
+  setTimeout(() => {
+    // 1. Stylesheet-cascaded override beats geometry (near is closer).
+    check('cascaded --nav-right override', engine.findTarget('right', $('origin'))?.id, 'target')
+
+    // 2. CSS none blocks a direction.
+    check('cascaded --nav-down: none blocks', engine.findTarget('down', $('origin')), null)
+
+    // 3. var() indirection is substituted in the computed value.
+    check('var() indirection resolves', engine.findTarget('left', $('origin'))?.id, 'target')
+
+    // 4. Config inside a matching media query applies.
+    check('@media-scoped config applies', engine.findTarget('up', $('origin'))?.id, 'target')
+
+    // 5. @property inherits:false — children of a CSS container are NOT containers.
+    check('@property stops container inheritance',
+      readNavConfig($('z-grandchild')).isContainer, false)
+    check('…while the container itself is one', readNavConfig($('zone')).isContainer, true)
+
+    // 6. Runtime class toggles are seen on the next pass (no stale cache).
+    const probe = $('near')
+    check('pre-toggle: geometry applies', engine.findTarget('right', probe)?.id, 'target')
+    probe.classList.add('toggle-on') // same value, but proves a fresh read…
+    probe.classList.add('css-blocked')
+    check('post-toggle: new CSS applies', engine.findTarget('down', probe), null)
+    probe.classList.remove('css-blocked')
+    check('post-untoggle: direction unblocked', engine.findTarget('down', probe) !== null, true)
+
+    // 7. The shipped focus ring actually paints (computed outline ≠ none).
+    $('origin').classList.add('spatial-focused')
+    const ring = getComputedStyle($('origin')).outlineStyle
+    check('.spatial-focused outline paints', ring !== 'none' && ring !== '', true)
+    $('origin').classList.remove('spatial-focused')
+
+    // 8. checkVisibility-backed visibility: visibility:hidden excluded even
+    //    though it still has client rects.
+    $('near').style.visibility = 'hidden'
+    check('visibility:hidden is not focusable', isElementVisible($('near')), false)
+    $('near').style.visibility = ''
+    check('…and visible again after clearing', isElementVisible($('near')), true)
+
+    // 9. Native <dialog>.showModal(): the top layer focus-blocks the rest of
+    //    the page with no attribute to select on — outside elements must stop
+    //    being candidates without any data-spatial-container.
+    const modal = document.getElementById('modal')
+    modal.showModal()
+    check('showModal: outside elements not focusable', isElementVisible($('target')), false)
+    check('showModal: inside elements focusable', isElementVisible($('m1')), true)
+    check('showModal: navigation stays inside (no contain attribute)',
+      engine.findTarget('right', $('m1'))?.id, 'm2')
+    check('showModal: nothing outside is reachable',
+      engine.findTarget('down', $('m2')), null)
+    modal.close()
+    check('after close: outside elements focusable again', isElementVisible($('target')), true)
+    check('after close: the closed dialog content is not', isElementVisible($('m1')), false)
+
+    window.__cssConformance = { pass: results.every((r) => r.pass), results }
+    const table = document.getElementById('results')
+    for (const r of results) {
+      const row = table.insertRow()
+      row.insertCell().textContent = r.pass ? 'PASS' : 'FAIL'
+      row.cells[0].className = r.pass ? 'pass' : 'fail'
+      row.insertCell().textContent = r.name
+      row.insertCell().textContent = r.pass ? '' : `expected ${r.expected}, got ${r.actual}`
+    }
+  }, 50)
+</script>
+</body>
+</html>

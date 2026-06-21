@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Virtualized list — spatial-nav-css</title>
+<link rel="stylesheet" href="../css/spatial.css">
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; height: 100vh; overflow: hidden;
+    background: #0e141b; color: #c7d5e0; font-family: system-ui, sans-serif;
+    display: grid; grid-template-columns: 240px 360px 1fr; gap: 20px; padding: 20px;
+  }
+  h1 { font-size: 15px; margin: 0 0 8px; }
+  p { font-size: 12px; opacity: 0.6; line-height: 1.5; }
+  nav { display: flex; flex-direction: column; gap: 6px; }
+  nav button {
+    background: #1b2838; border: 0; color: inherit; text-align: left;
+    padding: 10px 12px; border-radius: 6px; font-size: 13px;
+  }
+  #scroller {
+    height: calc(100vh - 90px); overflow-y: auto; border-radius: 8px;
+    background: #11161c; position: relative;
+  }
+  #spacer { position: relative; }
+  .vrow {
+    position: absolute; left: 8px; right: 8px; height: 40px;
+    display: flex; align-items: center; gap: 10px; padding: 0 12px;
+    border-radius: 6px; background: #1b2838; font-size: 13px; box-sizing: border-box;
+  }
+  .vrow small { opacity: 0.5; margin-left: auto; }
+  #stats { font: 12px/1.7 ui-monospace, monospace; opacity: 0.8; white-space: pre; }
+</style>
+</head>
+<body>
+
+<div>
+  <h1>Virtualized list (10,000 items)</h1>
+  <p>Only ~14 rows exist in the DOM at any time. <code>attachVirtualEdges</code>
+     continues navigation past the mounted window: scroll → mount → focus.
+     The same helper drives TanStack Virtual — this page hand-rolls the
+     windowing only to stay dependency-free.</p>
+  <nav data-spatial-container>
+    <button type="button" data-spatial-autofocus>A sidebar button</button>
+    <button type="button">Another one</button>
+  </nav>
+</div>
+
+<div id="scroller" data-spatial-container="remember">
+  <div id="spacer"></div>
+</div>
+
+<div id="stats"></div>
+
+<script type="module">
+  import { createSpatialNavigation } from '../dist/index.js'
+  import { attachVirtualEdges } from '../dist/virtual/index.js'
+
+  const TOTAL = 10000, ROW = 44, OVERSCAN = 4
+  const scroller = document.getElementById('scroller')
+  const spacer = document.getElementById('spacer')
+  spacer.style.height = `${TOTAL * ROW}px`
+
+  const stats = document.getElementById('stats')
+  function updateStats() {
+    const focused = document.querySelector('.spatial-focused')
+    stats.textContent =
+      `total items   ${TOTAL}\n` +
+      `mounted rows  ${spacer.children.length}\n` +
+      `focused       ${focused?.dataset.index ?? focused?.textContent?.trim() ?? '—'}`
+  }
+  document.addEventListener('spatial:focus', updateStats)
+
+  // Minimal windowing renderer (stand-in for TanStack Virtual's output).
+  function renderWindow() {
+    const start = Math.max(0, Math.floor(scroller.scrollTop / ROW) - OVERSCAN)
+    const end = Math.min(TOTAL, Math.ceil((scroller.scrollTop + scroller.clientHeight) / ROW) + OVERSCAN)
+    const keep = new Set()
+    for (let i = start; i < end; i++) keep.add(i)
+    for (const el of [...spacer.children]) {
+      if (!keep.delete(Number(el.dataset.index))) el.remove()
+    }
+    for (const i of keep) {
+      const el = document.createElement('div')
+      el.className = 'vrow spatial-pop'
+      el.dataset.index = i
+      el.setAttribute('data-focusable', '')
+      el.style.top = `${i * ROW + 2}px`
+      el.innerHTML = `Row ${i} <small>#${String(i).padStart(5, '0')}</small>`
+      spacer.appendChild(el)
+    }
+    updateStats()
+  }
+  scroller.addEventListener('scroll', renderWindow)
+  renderWindow()
+
+  const nav = createSpatialNavigation({ autofocus: true })
+  nav.start()
+
+  // The integration: continue navigation through unmounted items.
+  attachVirtualEdges(nav, {
+    zone: scroller,
+    count: () => TOTAL,
+    scrollToIndex: (i) => {
+      scroller.scrollTop = Math.max(0, i * ROW - scroller.clientHeight / 2)
+      renderWindow()
+    },
+  })
+
+</script>
+</body>
+</html>

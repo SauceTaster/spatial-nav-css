@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Production toolkit — spatial-nav-css</title>
+<link rel="stylesheet" href="../css/spatial.css">
+<style>
+  :root {
+    color-scheme: dark;
+    --spatial-focus-ring-color: #c084fc;
+    --spatial-focus-ring-glow: rgba(192, 132, 252, 0.4);
+    --panel: #161221;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(900px 500px at 50% -10%, #1d1530, #0c0a12);
+    color: #d8d2e4; font-family: system-ui, sans-serif;
+    padding: 28px 36px 40px;
+  }
+  header { margin-bottom: 22px; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  h1 span { color: #c084fc; }
+  .sub { font-size: 13px; opacity: 0.65; margin: 0; max-width: 760px; line-height: 1.5; }
+
+  .panels {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 18px; max-width: 1180px;
+  }
+  section {
+    background: var(--panel); border-radius: 12px; padding: 18px 20px 20px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    display: grid; gap: 12px; align-content: start;
+  }
+  section h2 { font-size: 14px; margin: 0; }
+  section > code {
+    font: 11px/1.5 ui-monospace, monospace; color: #b79df0;
+    background: rgba(192, 132, 252, 0.08); border-radius: 6px; padding: 6px 10px;
+    overflow-x: auto; white-space: pre;
+  }
+  section p { font-size: 12px; opacity: 0.65; margin: 0; line-height: 1.5; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  button {
+    border: 0; border-radius: 7px; padding: 9px 16px; font-size: 13px;
+    background: #2c2440; color: #e8e2f4;
+  }
+  button.primary { background: #7c3aed; color: #fff; }
+  .out { font: 12px/1.6 ui-monospace, monospace; color: #9ae6b4; min-height: 1.6em; }
+
+  /* long press */
+  .hold-card {
+    border-radius: 10px; padding: 18px; font-size: 13px; text-align: center;
+    background: linear-gradient(160deg, #2c2440, #161221);
+  }
+  .meter { height: 5px; border-radius: 3px; background: #241d35; overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 0; background: #c084fc; }
+
+  /* auto-restore chips */
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; min-height: 38px; }
+  .chips button { background: #3b2d5e; border-radius: 16px; padding: 8px 16px; }
+
+  /* throttle lane */
+  .lane { display: grid; gap: 6px; }
+  .lane button { text-align: left; padding: 7px 12px; font-size: 12px; }
+
+  footer { margin-top: 22px; font-size: 12px; opacity: 0.5; }
+  kbd { background: #2c2440; border-radius: 4px; padding: 1px 6px; font: 11px ui-monospace, monospace; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>production toolkit</span> — the parts you reach for when it ships</h1>
+  <p class="sub">
+    Each panel is one subpath import doing one production job. Everything here is
+    fully keyboard- <em>and</em> gamepad-drivable: <kbd>←↑↓→</kbd> move,
+    <kbd>Enter</kbd>/Ⓐ activate (hold for long-press), <kbd>Esc</kbd>/Ⓑ hub.
+  </p>
+</header>
+
+<div class="panels">
+
+  <section>
+    <h2>🗨 Gamepad-navigable dialogs</h2>
+    <code>import { spatialAlert, spatialConfirm } from 'spatial-nav-css/dialogs'</code>
+    <p>window.alert() freezes all page JS — gamepad polling included — and a
+       controller can't dismiss it. These render a real
+       &lt;dialog&gt;.showModal() instead: navigation is auto-contained,
+       every adapter works, and the promise resolves on dismissal.</p>
+    <div class="row" data-spatial-container>
+      <button id="btn-alert" data-spatial-autofocus>await spatialAlert(…)</button>
+      <button id="btn-confirm" class="primary">await spatialConfirm(…)</button>
+    </div>
+    <div class="out" id="dialog-out"></div>
+  </section>
+
+  <section>
+    <h2>⏱ Long press</h2>
+    <code>document.addEventListener('spatial:activaterelease',
+  e => e.detail.durationMs >= 600 ? hold() : tap())</code>
+    <p>Activate fires once per physical press (a held Enter doesn't machine-gun
+       clicks); release carries the hold duration. Try tapping vs. holding
+       <kbd>Enter</kbd>/Ⓐ on the card.</p>
+    <div class="hold-card spatial-pop" data-focusable id="hold-card">
+      Tap = play &nbsp;·&nbsp; hold ≥ 600 ms = options
+    </div>
+    <div class="meter"><i id="meter-fill"></i></div>
+    <div class="out" id="hold-out"></div>
+  </section>
+
+  <section>
+    <h2>🩹 Focus survives DOM removal</h2>
+    <code>autoRestoreFocus: true   // engine default</code>
+    <p>Press <kbd>Enter</kbd>/Ⓐ to delete the focused chip. The engine notices
+       the focused element vanished and restores focus — container memory →
+       default focus → first focusable — without any app code.</p>
+    <div class="chips" data-spatial-container="remember" id="chips"></div>
+    <div class="row"><button id="restock">Restock chips</button></div>
+    <div class="out" id="restore-out"></div>
+  </section>
+
+  <section>
+    <h2>🐢 Held-key throttle (TV platforms)</h2>
+    <code>nav.addAdapter(keyboardAdapter({ throttleMs: 150 }))</code>
+    <p>TV remotes auto-repeat brutally fast. throttleMs gates held-key repeats
+       by time (a fresh press is always instant). Toggle, then <em>hold</em>
+       <kbd>↓</kbd> through the list and feel the difference.</p>
+    <div class="row"><button id="throttle-toggle" aria-pressed="false">Throttle: off</button></div>
+    <div class="lane" data-spatial-container>
+      <button>Row 1</button><button>Row 2</button><button>Row 3</button>
+      <button>Row 4</button><button>Row 5</button><button>Row 6</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>🔬 Debug overlay</h2>
+    <code>import { attachDebugOverlay } from 'spatial-nav-css/debug'
+const overlay = attachDebugOverlay(nav)  // overlay.detach()</code>
+    <p>See the page the way the engine does: cyan = focusables (indexed),
+       dashed orange = containers (with their tokens), red = current focus.
+       Repaints on focus, scroll, and resize. Dev-only by design.</p>
+    <div class="row">
+      <button id="debug-toggle" aria-pressed="false">Show the engine's view</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>🧭 Where to next</h2>
+    <p style="opacity:0.8">Every page in this gallery is one self-contained
+       HTML file — <em>View Source is the tutorial.</em></p>
+    <p>The <a href="quickstart.html" style="color:#c084fc">quick start</a> covers
+       the core in three steps. The
+       <a href="media-center.html" style="color:#c084fc">media center</a> uses
+       this exact toolkit in context: long-press a Continue Watching tile to
+       remove it behind a spatialConfirm(), and watch focus restore itself.</p>
+    <div class="row"><button id="to-hub">← Back to the hub</button></div>
+  </section>
+
+</div>
+
+<footer>
+  All of this drives one engine instance created with
+  <code>createSpatialNavigation()</code> — adapters and overlays attach and
+  detach at runtime.
+</footer>
+
+<script type="module">
+  import { createSpatialNavigation, keyboardAdapter, gamepadAdapter } from '../dist/index.js'
+  import { spatialAlert, spatialConfirm } from '../dist/dialogs/index.js'
+  import { attachDebugOverlay } from '../dist/debug/index.js'
+
+  // Explicit adapter refs so the throttle toggle can swap the keyboard one.
+  let keyboard = keyboardAdapter()
+  const nav = createSpatialNavigation({ adapters: [keyboard, gamepadAdapter()], autofocus: true })
+  nav.start()
+
+  // --- dialogs -------------------------------------------------------------
+  const dialogOut = document.getElementById('dialog-out')
+  document.getElementById('btn-alert').addEventListener('click', async () => {
+    await spatialAlert('Cloud sync complete — 3 saves uploaded.', { title: 'Synced' })
+    dialogOut.textContent = '→ alert dismissed'
+  })
+  document.getElementById('btn-confirm').addEventListener('click', async () => {
+    const ok = await spatialConfirm('Delete the save file “Slot 2 — 14h 03m”?', {
+      title: 'Delete save',
+      okLabel: 'Delete',
+    })
+    dialogOut.textContent = ok ? '→ resolved true (deleted)' : '→ resolved false (kept)'
+  })
+
+  // --- long press ----------------------------------------------------------
+  const HOLD_MS = 600
+  const fill = document.getElementById('meter-fill')
+  const holdOut = document.getElementById('hold-out')
+  let raf = 0
+  document.addEventListener('spatial:activate', (e) => {
+    if (e.target.id !== 'hold-card') return
+    const start = performance.now()
+    const tick = () => {
+      fill.style.width = `${Math.min(1, (performance.now() - start) / HOLD_MS) * 100}%`
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+  })
+  document.addEventListener('spatial:activaterelease', (e) => {
+    if (e.target.id !== 'hold-card') return
+    cancelAnimationFrame(raf)
+    fill.style.width = '0'
+    const ms = Math.round(e.detail.durationMs)
+    holdOut.textContent =
+      ms >= HOLD_MS ? `long press (${ms} ms) → options menu` : `tap (${ms} ms) → playing`
+  })
+
+  // --- auto-restore --------------------------------------------------------
+  const chips = document.getElementById('chips')
+  const restoreOut = document.getElementById('restore-out')
+  function restock() {
+    chips.textContent = ''
+    for (const name of ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo']) {
+      const chip = document.createElement('button')
+      chip.textContent = name
+      chip.addEventListener('click', () => {
+        chip.remove() // that's all — the engine restores focus on its own
+        restoreOut.textContent = `removed ${name}; engine restored focus to “${nav.getFocused()?.textContent ?? '…'}”`
+        // (read again after the debounced restore lands)
+        setTimeout(() => {
+          restoreOut.textContent = `removed ${name}; engine restored focus to “${nav.getFocused()?.textContent ?? '…'}”`
+        }, 150)
+      })
+      chips.appendChild(chip)
+    }
+  }
+  document.getElementById('restock').addEventListener('click', restock)
+  restock()
+
+  // --- throttle ------------------------------------------------------------
+  const throttleToggle = document.getElementById('throttle-toggle')
+  throttleToggle.addEventListener('click', () => {
+    const on = throttleToggle.getAttribute('aria-pressed') !== 'true'
+    nav.removeAdapter(keyboard)
+    keyboard = keyboardAdapter(on ? { throttleMs: 150 } : {})
+    nav.addAdapter(keyboard) // adapters added while running start immediately
+    throttleToggle.setAttribute('aria-pressed', String(on))
+    throttleToggle.textContent = on ? 'Throttle: 150 ms' : 'Throttle: off'
+  })
+
+  // --- debug overlay -------------------------------------------------------
+  const debugToggle = document.getElementById('debug-toggle')
+  let overlay = null
+  debugToggle.addEventListener('click', () => {
+    if (overlay) {
+      overlay.detach()
+      overlay = null
+      debugToggle.textContent = 'Show the engine’s view'
+      debugToggle.setAttribute('aria-pressed', 'false')
+    } else {
+      overlay = attachDebugOverlay(nav)
+      debugToggle.textContent = 'Hide the overlay'
+      debugToggle.setAttribute('aria-pressed', 'true')
+    }
+  })
+
+  // --- hub -----------------------------------------------------------------
+  document.getElementById('to-hub').addEventListener('click', () => (location.href = 'index.html'))
+  document.addEventListener('spatial:back', (e) => {
+    if (e.defaultPrevented) return // the dialogs above consume B/Esc first
+    e.preventDefault()
+    location.href = 'index.html'
+  })
+</script>
+</body>
+</html>

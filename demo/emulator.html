@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retro Emulator — spatial-nav-css</title>
+<link rel="stylesheet" href="../css/spatial.css">
+<style>
+  :root {
+    color-scheme: dark;
+    --spatial-focus-ring-color: #39ff88;
+    --spatial-focus-ring-glow: rgba(57, 255, 136, 0.45);
+    --bg: #0a0c14;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; height: 100vh; overflow: hidden;
+    background: var(--bg); color: #cde;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    display: grid; grid-template-columns: 230px 1fr 250px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "systems games meta";
+  }
+  /* CRT scanlines + vignette */
+  body::after {
+    content: ''; position: fixed; inset: 0; pointer-events: none;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55));
+  }
+
+  .top {
+    grid-area: top; display: flex; align-items: center; gap: 14px; padding: 0 18px;
+    border-bottom: 1px solid #1c2438; font-size: 13px;
+  }
+  .top .logo { color: #39ff88; letter-spacing: 0.2em; font-weight: 700; }
+  .top .clock { margin-left: auto; opacity: 0.6; }
+
+  .systems {
+    grid-area: systems; padding: 14px 10px; display: flex; flex-direction: column; gap: 4px;
+    border-right: 1px solid #1c2438;
+  }
+  .systems button {
+    background: none; border: 0; color: #cde; text-align: left;
+    font: inherit; font-size: 13px; padding: 10px 12px; border-radius: 4px;
+    display: flex; justify-content: space-between;
+  }
+  .systems button i { font-style: normal; opacity: 0.5; }
+  .systems button.active { color: var(--sys, #39ff88); }
+
+  .games { grid-area: games; overflow-y: auto; padding: 16px; }
+  .games h2 { font-size: 13px; margin: 0 0 12px; opacity: 0.7; letter-spacing: 0.1em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 12px; }
+  .cart {
+    height: 120px; border-radius: 4px; padding: 8px;
+    display: grid; align-content: end; font-size: 11px; line-height: 1.3;
+    background: linear-gradient(165deg, var(--c, #234), #0d1018 80%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+    image-rendering: pixelated;
+  }
+
+  .meta {
+    grid-area: meta; border-left: 1px solid #1c2438; padding: 16px; font-size: 12px;
+    display: grid; align-content: start; gap: 10px;
+  }
+  .meta .shot {
+    height: 110px; border-radius: 4px;
+    background: linear-gradient(135deg, var(--c, #234) 0%, #060810 90%);
+  }
+  .meta h3 { margin: 0; font-size: 14px; color: #fff; }
+  .meta dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; }
+  .meta dt { opacity: 0.5; } .meta dd { margin: 0; }
+  .meta .stars { color: #ffd54a; letter-spacing: 2px; }
+  .hint { grid-column: 1 / -1; margin-top: auto; opacity: 0.45; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <span class="logo">RETROSTATION</span>
+  <span id="count">—</span>
+  <span class="clock" id="clock"></span>
+</div>
+
+<nav class="systems" data-spatial-container="remember" aria-label="Systems">
+  <button data-system="nes" style="--sys:#e84c4c" data-spatial-autofocus>Nintendo ES <i>4</i></button>
+  <button data-system="snes" style="--sys:#a06ee8">Super NES <i>4</i></button>
+  <button data-system="genesis" style="--sys:#4c9be8">Genesis <i>4</i></button>
+  <button data-system="psx" style="--sys:#e8e84c">PlayStation <i>4</i></button>
+  <button data-system="n64" style="--sys:#4ce86e" data-nav-down="none">Nintendo 64 <i>4</i></button>
+</nav>
+
+<section class="games">
+  <h2 id="games-title">GAMES</h2>
+  <div class="grid" id="grid" data-spatial-container="remember"></div>
+</section>
+
+<aside class="meta">
+  <div class="shot" id="meta-shot"></div>
+  <h3 id="meta-title">Select a game</h3>
+  <dl>
+    <dt>Year</dt><dd id="meta-year">—</dd>
+    <dt>Genre</dt><dd id="meta-genre">—</dd>
+    <dt>Players</dt><dd id="meta-players">—</dd>
+    <dt>Rating</dt><dd class="stars" id="meta-stars">—</dd>
+  </dl>
+  <span class="hint">↕↔ browse · Enter/Ⓐ launch · Esc/Ⓑ hub<br><span id="launched"></span></span>
+</aside>
+
+<script type="module">
+  import { createSpatialNavigation } from '../dist/index.js'
+
+  const LIBRARY = {
+    nes: [
+      { t: 'Star Courier', y: 1987, g: 'Shooter', p: '1-2', r: 4, c: '#5a2430' },
+      { t: 'Dungeon Patrol', y: 1989, g: 'Adventure', p: '1', r: 5, c: '#24405a' },
+      { t: 'Robo Plumber', y: 1986, g: 'Platformer', p: '1-2', r: 4, c: '#2f5a24' },
+      { t: 'Hyper Tennis', y: 1988, g: 'Sports', p: '1-2', r: 3, c: '#5a4a24' },
+    ],
+    snes: [
+      { t: 'Crystal Saga III', y: 1994, g: 'RPG', p: '1', r: 5, c: '#3a2a5a' },
+      { t: 'Mode-7 Racer', y: 1992, g: 'Racing', p: '1-2', r: 4, c: '#24505a' },
+      { t: 'Chrono Drift', y: 1995, g: 'RPG', p: '1', r: 5, c: '#5a2444' },
+      { t: 'Beat Brawlers', y: 1993, g: 'Beat-em-up', p: '1-2', r: 3, c: '#445a24' },
+    ],
+    genesis: [
+      { t: 'Sonic Boom Blvd', y: 1992, g: 'Platformer', p: '1', r: 4, c: '#24345a' },
+      { t: 'Streets of Neon', y: 1991, g: 'Beat-em-up', p: '1-2', r: 5, c: '#5a2424' },
+      { t: 'Gunstar Comet', y: 1993, g: 'Run & gun', p: '1-2', r: 5, c: '#4a245a' },
+      { t: 'Ecto Dolphin', y: 1992, g: 'Action', p: '1', r: 3, c: '#245a52' },
+    ],
+    psx: [
+      { t: 'Wipeline 2097', y: 1996, g: 'Racing', p: '1-2', r: 4, c: '#2a2a40' },
+      { t: 'Gray Gear Solid', y: 1998, g: 'Stealth', p: '1', r: 5, c: '#33402a' },
+      { t: 'Spyre the Dragon', y: 1998, g: 'Platformer', p: '1', r: 4, c: '#402a3a' },
+      { t: 'Parasite Avenue', y: 1999, g: 'Horror RPG', p: '1', r: 4, c: '#402a2a' },
+    ],
+    n64: [
+      { t: 'Star Sixty-Bird', y: 1997, g: 'Rail shooter', p: '1', r: 4, c: '#2a3340' },
+      { t: 'Ocarina of Tomb', y: 1998, g: 'Adventure', p: '1', r: 5, c: '#2a4030' },
+      { t: 'Kart Sixty-Four', y: 1996, g: 'Racing', p: '1-4', r: 5, c: '#403a2a' },
+      { t: 'Golden Aye', y: 1997, g: 'FPS', p: '1-4', r: 5, c: '#33402a' },
+    ],
+  }
+
+  const grid = document.getElementById('grid')
+  const title = document.getElementById('games-title')
+  const count = document.getElementById('count')
+
+  function showSystem(name) {
+    for (const b of document.querySelectorAll('.systems button')) {
+      b.classList.toggle('active', b.dataset.system === name)
+    }
+    const games = LIBRARY[name]
+    title.textContent = name.toUpperCase() + ' — GAMES'
+    count.textContent = `${games.length} titles`
+    grid.innerHTML = ''
+    for (const game of games) {
+      const el = document.createElement('div')
+      el.className = 'cart spatial-pop'
+      el.setAttribute('data-focusable', '')
+      el.style.setProperty('--c', game.c)
+      el.textContent = game.t
+      Object.assign(el.dataset, { year: game.y, genre: game.g, players: game.p, rating: game.r })
+      grid.appendChild(el)
+    }
+  }
+
+  // Metadata panel follows spatial focus.
+  document.addEventListener('spatial:focus', (e) => {
+    const el = e.target
+    if (el.dataset.system) showSystem(el.dataset.system)
+    if (!el.classList.contains('cart')) return
+    document.getElementById('meta-title').textContent = el.textContent
+    document.getElementById('meta-year').textContent = el.dataset.year
+    document.getElementById('meta-genre').textContent = el.dataset.genre
+    document.getElementById('meta-players').textContent = el.dataset.players
+    document.getElementById('meta-stars').textContent = '★'.repeat(+el.dataset.rating) + '☆'.repeat(5 - el.dataset.rating)
+    document.getElementById('meta-shot').style.setProperty('--c', el.style.getPropertyValue('--c'))
+  })
+
+  document.addEventListener('spatial:activate', (e) => {
+    if (e.target.classList.contains('cart')) {
+      document.getElementById('launched').textContent = `▶ launching ${e.target.textContent}…`
+    }
+  })
+
+  document.addEventListener('spatial:back', (e) => {
+    if (e.defaultPrevented) return // a dialog or other layer already handled it
+    e.preventDefault()
+    location.href = 'index.html'
+  })
+
+  showSystem('nes')
+  const nav = createSpatialNavigation({ autofocus: true })
+  nav.start()
+
+  const clock = document.getElementById('clock')
+  const tick = () => (clock.textContent = new Date().toLocaleTimeString())
+  tick(); setInterval(tick, 1000)
+</script>
+</body>
+</html>

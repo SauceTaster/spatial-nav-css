@@ -1,0 +1,216 @@
+{
+  "name": "spatial-nav-css",
+  "version": "0.2.0",
+  "description": "Spatial (directional) navigation with CSS-driven configuration and pluggable gamepad/keyboard/remote input — in the spirit of Valve's Panorama UI and the discontinued W3C CSS Spatial Navigation spec.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./react": {
+      "import": {
+        "types": "./dist/react/index.d.ts",
+        "default": "./dist/react/index.js"
+      },
+      "require": {
+        "types": "./dist/react/index.d.cts",
+        "default": "./dist/react/index.cjs"
+      }
+    },
+    "./react-aria": {
+      "import": {
+        "types": "./dist/react-aria/index.d.ts",
+        "default": "./dist/react-aria/index.js"
+      },
+      "require": {
+        "types": "./dist/react-aria/index.d.cts",
+        "default": "./dist/react-aria/index.cjs"
+      }
+    },
+    "./vue": {
+      "import": {
+        "types": "./dist/vue/index.d.ts",
+        "default": "./dist/vue/index.js"
+      },
+      "require": {
+        "types": "./dist/vue/index.d.cts",
+        "default": "./dist/vue/index.cjs"
+      }
+    },
+    "./svelte": {
+      "import": {
+        "types": "./dist/svelte/index.d.ts",
+        "default": "./dist/svelte/index.js"
+      },
+      "require": {
+        "types": "./dist/svelte/index.d.cts",
+        "default": "./dist/svelte/index.cjs"
+      }
+    },
+    "./elements": {
+      "import": {
+        "types": "./dist/elements/index.d.ts",
+        "default": "./dist/elements/index.js"
+      },
+      "require": {
+        "types": "./dist/elements/index.d.cts",
+        "default": "./dist/elements/index.cjs"
+      }
+    },
+    "./virtual": {
+      "import": {
+        "types": "./dist/virtual/index.d.ts",
+        "default": "./dist/virtual/index.js"
+      },
+      "require": {
+        "types": "./dist/virtual/index.d.cts",
+        "default": "./dist/virtual/index.cjs"
+      }
+    },
+    "./dialogs": {
+      "import": {
+        "types": "./dist/dialogs/index.d.ts",
+        "default": "./dist/dialogs/index.js"
+      },
+      "require": {
+        "types": "./dist/dialogs/index.d.cts",
+        "default": "./dist/dialogs/index.cjs"
+      }
+    },
+    "./debug": {
+      "import": {
+        "types": "./dist/debug/index.d.ts",
+        "default": "./dist/debug/index.js"
+      },
+      "require": {
+        "types": "./dist/debug/index.d.cts",
+        "default": "./dist/debug/index.cjs"
+      }
+    },
+    "./css": "./css/spatial.css",
+    "./spatial.css": "./css/spatial.css"
+  },
+  "typesVersions": {
+    "*": {
+      "react": [
+        "./dist/react/index.d.ts"
+      ],
+      "react-aria": [
+        "./dist/react-aria/index.d.ts"
+      ],
+      "vue": [
+        "./dist/vue/index.d.ts"
+      ],
+      "svelte": [
+        "./dist/svelte/index.d.ts"
+      ],
+      "elements": [
+        "./dist/elements/index.d.ts"
+      ],
+      "virtual": [
+        "./dist/virtual/index.d.ts"
+      ],
+      "dialogs": [
+        "./dist/dialogs/index.d.ts"
+      ],
+      "debug": [
+        "./dist/debug/index.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "css",
+    "docs",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SauceTaster/spatial-nav-css.git"
+  },
+  "homepage": "https://github.com/SauceTaster/spatial-nav-css#readme",
+  "bugs": {
+    "url": "https://github.com/SauceTaster/spatial-nav-css/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "spatial-navigation",
+    "css",
+    "gamepad",
+    "steam-input",
+    "xinput",
+    "directional-navigation",
+    "focus",
+    "tv",
+    "remote",
+    "panorama",
+    "react",
+    "react-aria",
+    "vue",
+    "svelte",
+    "web-components"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome ci .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "bench": "vitest bench --run",
+    "check:package": "publint && attw --pack . --exclude-entrypoints ./css ./spatial.css",
+    "ci": "npm run lint && npm run typecheck && npm run build && npm run check:package && npm run test:coverage",
+    "demo": "npm run build && node scripts/serve.mjs",
+    "changeset": "changeset",
+    "release": "npm run build && changeset publish"
+  },
+  "peerDependencies": {
+    "react": ">=17",
+    "vue": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.3",
+    "@biomejs/biome": "^2.4.16",
+    "@changesets/cli": "^2.31.0",
+    "@tanstack/react-virtual": "^3.14.2",
+    "@testing-library/react": "^16.2.0",
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitest/coverage-v8": "^3.2.6",
+    "jsdom": "^26.0.0",
+    "publint": "^0.3.21",
+    "react": "^19.0.0",
+    "react-aria-components": "^1.18.0",
+    "react-dom": "^19.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^3.0.0",
+    "vue": "^3.5.0"
+  }
+}

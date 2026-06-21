@@ -1,0 +1,50 @@
+/* Shared chrome for every example page. The spatial focus ring comes from
+   spatial-nav-css/css (imported per entry); this is just layout/theme. */
+:root {
+  color-scheme: dark;
+  --bg: #0e141b;
+  --panel: #1b2838;
+  --panel-2: #24384e;
+  --accent: #1a9fff;
+  --text: #c7d5e0;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding: 24px 28px 48px;
+}
+a { color: var(--accent); }
+.ex-head { max-width: 860px; margin: 0 auto 20px; }
+.ex-head h1 { font-size: 20px; margin: 0 0 6px; }
+.ex-head h1 .lib { color: var(--accent); }
+.ex-head p { font-size: 13px; opacity: 0.7; line-height: 1.55; margin: 0; }
+.ex-head .back { font-size: 12px; opacity: 0.7; display: inline-block; margin-bottom: 12px; }
+.ex-body { max-width: 860px; margin: 0 auto; display: grid; gap: 20px; }
+.ex-panel {
+  background: var(--panel); border-radius: 12px; padding: 18px 20px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+}
+.ex-panel h2 { font-size: 13px; margin: 0 0 4px; }
+.ex-panel .hint { font-size: 12px; opacity: 0.6; margin: 0 0 14px; line-height: 1.5; }
+.ex-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.ex-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.tile {
+  height: 84px; border-radius: 8px; padding: 10px; font-size: 13px;
+  display: grid; align-content: end; cursor: pointer; user-select: none;
+  background: linear-gradient(160deg, var(--panel-2), var(--panel));
+  border: 0; color: var(--text); text-align: left;
+}
+.tile.decoration {
+  background: repeating-linear-gradient(45deg, #1a1f27, #1a1f27 8px, #161b22 8px, #161b22 16px);
+  opacity: 0.6; cursor: default;
+}
+.btn {
+  background: var(--panel-2); border: 0; color: var(--text);
+  padding: 9px 16px; border-radius: 7px; font-size: 13px; cursor: pointer;
+}
+.status { font: 12px/1.6 ui-monospace, monospace; opacity: 0.85; min-height: 1.5em; }
+.tag { font-size: 11px; opacity: 0.5; }
+kbd { background: var(--panel-2); border-radius: 4px; padding: 1px 6px; font: 11px ui-monospace, monospace; }

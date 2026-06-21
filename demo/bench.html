@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>spatial-nav-css — browser benchmark</title>
+<link rel="stylesheet" href="../css/spatial.css">
+<style>
+  body { margin: 0; background: #0e141b; color: #c7d5e0; font: 13px/1.5 ui-monospace, monospace; }
+  #report { position: fixed; top: 8px; right: 8px; background: #1b2838; padding: 10px 14px;
+            border-radius: 8px; z-index: 10; white-space: pre; }
+  main { padding: 12px; }
+  nav { position: fixed; left: 0; top: 0; bottom: 0; width: 150px; background: #1b2838; padding: 8px; }
+  nav button { display: block; width: 100%; margin: 4px 0; padding: 8px; background: none;
+               border: 0; color: inherit; text-align: left; }
+  main { margin-left: 160px; }
+  .rail { display: flex; gap: 8px; overflow-x: auto; padding: 6px 0; }
+  .card { flex: 0 0 110px; height: 150px; border-radius: 6px; background: #2a475e;
+          display: grid; place-content: end center; font-size: 11px; }
+</style>
+</head>
+<body>
+<div id="report">building…</div>
+<nav data-spatial-container="remember" id="sidebar"></nav>
+<main id="main"></main>
+
+<script type="module">
+  import { createSpatialNavigation } from '../dist/index.js'
+
+  const RAILS = 10, CARDS = 50
+
+  const sidebar = document.getElementById('sidebar')
+  for (let i = 0; i < 6; i++) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.textContent = `menu-${i}`
+    sidebar.appendChild(b)
+  }
+  const main = document.getElementById('main')
+  const allCards = []
+  for (let r = 0; r < RAILS; r++) {
+    const rail = document.createElement('div')
+    rail.className = 'rail'
+    rail.setAttribute('data-spatial-container', 'remember')
+    for (let c = 0; c < CARDS; c++) {
+      const card = document.createElement('div')
+      card.className = 'card'
+      card.setAttribute('data-focusable', '')
+      card.textContent = `${r}-${c}`
+      rail.appendChild(card)
+      allCards.push(card)
+    }
+    main.appendChild(rail)
+  }
+
+  // Full production path: real rects, real visibility, real computed styles.
+  const nav = createSpatialNavigation({ adapters: [] })
+  nav.start()
+  const engine = nav.engine
+
+  function percentile(sorted, p) {
+    return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))]
+  }
+
+  function run() {
+    const dirs = ['down', 'right', 'up', 'left']
+    // Warmup
+    for (let i = 0; i < 50; i++) {
+      engine.findTarget(dirs[i % 4], allCards[(i * 37) % allCards.length])
+    }
+    // Measure findTarget (the search itself)
+    const search = []
+    for (let i = 0; i < 400; i++) {
+      const from = allCards[(i * 137) % allCards.length]
+      const t0 = performance.now()
+      engine.findTarget(dirs[i % 4], from)
+      search.push(performance.now() - t0)
+    }
+    search.sort((a, b) => a - b)
+
+    // Measure full navigate (search + focus + scroll + events)
+    nav.focus(allCards[0])
+    const move = []
+    for (let i = 0; i < 200; i++) {
+      const t0 = performance.now()
+      engine.navigate(dirs[i % 2 === 0 ? 1 : 3]) // right, left, right…
+      move.push(performance.now() - t0)
+    }
+    move.sort((a, b) => a - b)
+
+    const fmt = (arr) =>
+      `p50 ${percentile(arr, 0.5).toFixed(3)}ms  p95 ${percentile(arr, 0.95).toFixed(3)}ms  max ${arr[arr.length - 1].toFixed(3)}ms`
+    const result = {
+      focusables: allCards.length + 6,
+      findTarget: fmt(search),
+      navigate: fmt(move),
+    }
+    window.__benchResult = result
+    document.getElementById('report').textContent =
+      `focusables: ${result.focusables}\nfindTarget  ${result.findTarget}\nnavigate    ${result.navigate}`
+  }
+
+  // Let layout settle, then run. (setTimeout rather than rAF so the bench
+  // also runs in backgrounded/headless tabs.)
+  setTimeout(run, 100)
+</script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VR Panels — spatial-nav-css</title>
+<link rel="stylesheet" href="../css/spatial.css">
+<style>
+  :root {
+    color-scheme: dark;
+    --spatial-focus-ring-color: #7df3ff;
+    --spatial-focus-ring-glow: rgba(125, 243, 255, 0.55);
+    --spatial-focus-ring-width: 2px;
+    --spatial-focus-ring-radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; height: 100vh; overflow: hidden;
+    background:
+      radial-gradient(2px 2px at 12% 22%, #fff8 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 78% 12%, #fff6 0%, transparent 100%),
+      radial-gradient(1px 1px at 55% 70%, #fff5 0%, transparent 100%),
+      radial-gradient(2px 2px at 30% 80%, #fff7 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 90% 55%, #fff6 0%, transparent 100%),
+      radial-gradient(ellipse at 50% 120%, #11324a 0%, #050a12 60%);
+    color: #dff3ff;
+    font-family: system-ui, sans-serif;
+    display: grid; place-content: center;
+  }
+  .scene {
+    display: flex; gap: 36px; align-items: center;
+    perspective: 1100px;
+    transform-style: preserve-3d;
+  }
+  .panel {
+    border-radius: 18px; padding: 18px;
+    background: linear-gradient(170deg, rgba(40, 70, 95, 0.55), rgba(12, 22, 34, 0.75));
+    backdrop-filter: blur(4px);
+    box-shadow: inset 0 0 0 1px rgba(125, 243, 255, 0.12), 0 30px 60px rgba(0,0,0,0.5);
+    display: grid; gap: 10px;
+  }
+  .panel h2 { margin: 0 0 4px; font-size: 13px; opacity: 0.7; letter-spacing: 0.14em; }
+  .panel.left  { transform: rotateY(24deg) translateZ(-40px); }
+  .panel.right { transform: rotateY(-24deg) translateZ(-40px); }
+
+  .apps { grid-template-columns: repeat(3, 86px); }
+  .app {
+    height: 86px; border-radius: 14px; display: grid; place-content: center; gap: 6px;
+    text-align: center; font-size: 11px;
+    background: rgba(125, 243, 255, 0.07);
+  }
+  .app span { font-size: 26px; }
+
+  .toggle-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 18px;
+    width: 190px; padding: 10px 12px; border-radius: 12px; font-size: 13px;
+    background: rgba(125, 243, 255, 0.06);
+  }
+  .pill {
+    width: 36px; height: 20px; border-radius: 10px; background: #2a4456; position: relative;
+    transition: background 120ms;
+  }
+  .pill::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+    border-radius: 50%; background: #9bb7c9; transition: transform 120ms, background 120ms;
+  }
+  .toggle-row[aria-pressed="true"] .pill { background: #2dd4bf; }
+  .toggle-row[aria-pressed="true"] .pill::after { transform: translateX(16px); background: #04282b; }
+
+  .media { width: 200px; }
+  .media .now { font-size: 13px; line-height: 1.5; opacity: 0.9; }
+  .controls { display: flex; gap: 8px; justify-content: center; }
+  .controls button {
+    width: 44px; height: 44px; border-radius: 50%; border: 0; font-size: 15px;
+    background: rgba(125, 243, 255, 0.1); color: #dff3ff;
+  }
+  .hud {
+    position: fixed; bottom: 22px; left: 0; right: 0; text-align: center;
+    font-size: 12px; opacity: 0.55;
+  }
+</style>
+</head>
+<body>
+
+<div class="scene">
+  <section class="panel left" data-spatial-container="remember">
+    <h2>QUICK SETTINGS</h2>
+    <div class="toggle-row spatial-pop" data-focusable role="button" aria-pressed="true">Wi-Fi <i class="pill"></i></div>
+    <div class="toggle-row spatial-pop" data-focusable role="button" aria-pressed="false">Do Not Disturb <i class="pill"></i></div>
+    <div class="toggle-row spatial-pop" data-focusable role="button" aria-pressed="true">Boundary Grid <i class="pill"></i></div>
+    <div class="toggle-row spatial-pop" data-focusable role="button" aria-pressed="false">Passthrough <i class="pill"></i></div>
+  </section>
+
+  <section class="panel apps" data-spatial-container="remember" style="grid-template-columns: repeat(3, 86px)">
+    <h2 style="grid-column: 1/-1">LIBRARY</h2>
+    <div class="app spatial-pop" data-focusable data-spatial-autofocus><span>🚀</span>Orbit Lab</div>
+    <div class="app spatial-pop" data-focusable><span>🎨</span>Sculpt</div>
+    <div class="app spatial-pop" data-focusable><span>🏔️</span>Summit</div>
+    <div class="app spatial-pop" data-focusable><span>🎬</span>Cinema</div>
+    <div class="app spatial-pop" data-focusable><span>♟️</span>Deep Board</div>
+    <div class="app spatial-pop" data-focusable><span>🛰️</span>EVA Sim</div>
+  </section>
+
+  <section class="panel right media" data-spatial-container="remember">
+    <h2>NOW PLAYING</h2>
+    <div class="now">Solar Winds<br><small style="opacity:.6">Phase Array — 3:42</small></div>
+    <div class="controls" data-spatial-container>
+      <button>⏮</button>
+      <button id="play">⏸</button>
+      <button>⏭</button>
+    </div>
+  </section>
+</div>
+
+<div class="hud">
+  Spatial navigation across 3D-transformed panels — the engine reads <em>post-transform</em> geometry.
+  &nbsp;Enter/Ⓐ toggles &amp; launches · Esc/Ⓑ hub <span id="hud-msg"></span>
+</div>
+
+<script type="module">
+  import { createSpatialNavigation } from '../dist/index.js'
+
+  const nav = createSpatialNavigation({ autofocus: true })
+  nav.start()
+
+  const hud = document.getElementById('hud-msg')
+  document.addEventListener('spatial:activate', (e) => {
+    const t = e.target
+    if (t.matches('.toggle-row')) {
+      t.setAttribute('aria-pressed', t.getAttribute('aria-pressed') !== 'true')
+    } else if (t.matches('.app')) {
+      hud.textContent = ` · launching ${t.textContent.trim()}…`
+    } else if (t.id === 'play') {
+      t.textContent = t.textContent === '⏸' ? '▶' : '⏸'
+    }
+  })
+  document.addEventListener('spatial:back', (e) => {
+    if (e.defaultPrevented) return // a dialog or other layer already handled it
+    e.preventDefault()
+    location.href = 'index.html'
+  })
+</script>
+</body>
+</html>

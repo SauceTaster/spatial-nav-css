@@ -1,0 +1,44 @@
+# Changesets release flow (the TanStack/ecosystem standard):
+#  - Contributors add a changeset alongside their PR (`npx changeset`).
+#  - On merge to main, this workflow opens/updates a "Version Packages" PR.
+#  - Merging that PR publishes to npm with provenance attestation.
+#
+# Requires the NPM_TOKEN repository secret (npm automation token).
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency: release-${{ github.ref }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # version PR
+      pull-requests: write # version PR
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - name: Verify before release
+        run: npm run ci
+      - name: Create release PR or publish
+        uses: changesets/action@v1
+        with:
+          publish: npm run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'

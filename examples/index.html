@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>spatial-nav-css — framework & library examples</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; min-height: 100vh; background: #0e141b; color: #c7d5e0;
+    font-family: system-ui, sans-serif; padding: 36px;
+    display: grid; gap: 24px; align-content: start; justify-items: center;
+  }
+  header { text-align: center; }
+  h1 { margin: 0 0 6px; font-size: 22px; } h1 span { color: #1a9fff; }
+  header p { margin: 0; font-size: 13px; opacity: 0.65; max-width: 640px; }
+  .group { width: 100%; max-width: 980px; }
+  .group h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.5; margin: 0 0 10px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  a.tile {
+    display: grid; gap: 5px; align-content: start; padding: 16px; border-radius: 12px;
+    text-decoration: none; color: inherit; background: linear-gradient(165deg, var(--c1, #1b2838), #11161c);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+  }
+  a.tile strong { font-size: 15px; }
+  a.tile small { font-size: 12px; opacity: 0.7; line-height: 1.45; }
+  footer { font-size: 12px; opacity: 0.5; text-align: center; }
+  kbd { background: #1b2838; border-radius: 4px; padding: 1px 6px; font: 11px ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>spatial-nav</span> — examples</h1>
+  <p>Idiomatic integrations with each framework adapter and a few real-world libraries.
+     Every page is driven by the engine and is also a regression test
+     (<code>npm test</code>). This gallery is itself spatially navigable.</p>
+</header>
+
+<section class="group">
+  <h2>Framework adapters</h2>
+  <main class="tiles" data-spatial-container="wrap">
+    <a class="tile" href="/react.html" data-spatial-autofocus style="--c1:#10202e"><strong>⚛ React</strong><small>useFocusable, SpatialContainer, exclusion gotchas, auto-restore</small></a>
+    <a class="tile" href="/vue.html" style="--c1:#10261c"><strong>🟢 Vue 3</strong><small>useFocusable composable + v-focusable / v-spatial-container directives</small></a>
+    <a class="tile" href="/svelte.html" style="--c1:#2a1410"><strong>🧡 Svelte 5</strong><small>use:focusable / use:spatialContainer actions + focused store</small></a>
+    <a class="tile" href="/react-aria.html" style="--c1:#1a1430"><strong>🎯 React Aria</strong><small>RAC ListBox = one spatial stop; spatialZone / spatialFocusable</small></a>
+    <a class="tile" href="/web-components.html" style="--c1:#241430"><strong>🧩 Web Components</strong><small>&lt;spatial-nav&gt; / &lt;spatial-container&gt; — zero framework</small></a>
+    <a class="tile" href="/vanilla.html" style="--c1:#202814"><strong>🚫 Exclusion gotchas</strong><small>every way to make something non-focusable, with a live badge</small></a>
+  </main>
+</section>
+
+<section class="group">
+  <h2>Real-world library remixes</h2>
+  <main class="tiles" data-spatial-container="wrap">
+    <a class="tile" href="/tanstack-table.html" style="--c1:#102826"><strong>🧮 TanStack Table</strong><small>a data grid as a 2D field of cell-stops; sortable headers</small></a>
+    <a class="tile" href="/echarts.html" style="--c1:#2a2410"><strong>📊 Apache ECharts</strong><small>the canvas is opaque — focusable controls drive the chart</small></a>
+    <a class="tile" href="/react-flow.html" style="--c1:#101e2c"><strong>🕸 React Flow</strong><small>nav across transform-positioned nodes (post-transform geometry)</small></a>
+  </main>
+</section>
+
+<footer><kbd>←↑↓→</kbd> move · <kbd>Enter</kbd>/Ⓐ open · View Source on any page is the tutorial</footer>
+
+<script type="module">
+  import { createSpatialNavigation } from 'spatial-nav-css'
+  import 'spatial-nav-css/css'
+  createSpatialNavigation({ autofocus: true }).start()
+</script>
+</body>
+</html>

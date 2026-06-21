@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>spatial-nav-css — web components demo</title>
+<link rel="stylesheet" href="../css/spatial.css">
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #0e141b;
+    color: #c7d5e0;
+    font-family: system-ui, sans-serif;
+    display: grid;
+    place-content: start center;
+    padding: 32px;
+    gap: 24px;
+  }
+  h1 { font-size: 18px; margin: 0; }
+  p.note { font-size: 13px; opacity: 0.6; margin: 0; max-width: 560px; }
+  spatial-container { display: flex; gap: 12px; }
+  spatial-container[remember] { padding: 10px; border-radius: 10px; background: #1b2838; }
+  .tile {
+    width: 110px;
+    height: 80px;
+    border-radius: 8px;
+    background: linear-gradient(160deg, #2a475e, #1b2838);
+    display: grid;
+    place-content: center;
+    font-size: 13px;
+  }
+  #log { font: 12px/1.7 ui-monospace, monospace; opacity: 0.75; min-height: 3em; }
+</style>
+</head>
+<body>
+
+<h1>&lt;spatial-nav&gt; — zero-framework declarative usage</h1>
+<p class="note">
+  Everything below is plain HTML: a <code>&lt;spatial-nav&gt;</code> island with two
+  <code>&lt;spatial-container&gt;</code> rows. Arrow keys / a gamepad navigate;
+  the second row wraps and remembers.
+</p>
+
+<spatial-nav auto-focus>
+  <spatial-container remember>
+    <div class="tile spatial-pop" data-focusable>One</div>
+    <div class="tile spatial-pop" data-focusable>Two</div>
+    <div class="tile spatial-pop" data-focusable>Three</div>
+  </spatial-container>
+
+  <spatial-container wrap remember>
+    <div class="tile spatial-pop" data-focusable>Alpha</div>
+    <div class="tile spatial-pop" data-focusable data-spatial-autofocus>Beta</div>
+    <div class="tile spatial-pop" data-focusable>Gamma</div>
+    <div class="tile spatial-pop" data-focusable>Delta</div>
+  </spatial-container>
+</spatial-nav>
+
+<div id="log"></div>
+
+<script type="module">
+  import { defineSpatialElements } from '../dist/elements/index.js'
+  defineSpatialElements()
+
+  const log = document.getElementById('log')
+  document.addEventListener('spatial:focus', (e) => {
+    log.textContent = `focus → ${e.target.textContent.trim()} [${e.detail.source}]`
+  })
+  document.addEventListener('spatial:activate', (e) => {
+    log.textContent = `activate → ${e.target.textContent.trim()}`
+  })
+</script>
+</body>
+</html>
