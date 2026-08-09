@@ -1,6 +1,6 @@
 {
   "name": "spatial-nav-css",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Spatial (directional) navigation with CSS-driven configuration and pluggable gamepad/keyboard/remote input — in the spirit of Valve's Panorama UI and the discontinued W3C CSS Spatial Navigation spec.",
   "license": "MIT",
   "type": "module",
