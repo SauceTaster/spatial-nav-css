@@ -194,23 +194,23 @@
     }
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.3",
-    "@biomejs/biome": "^2.4.16",
-    "@changesets/cli": "^2.31.0",
-    "@tanstack/react-virtual": "^3.14.2",
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@biomejs/biome": "^2.5.7",
+    "@changesets/cli": "^2.31.1",
+    "@tanstack/react-virtual": "^3.14.9",
     "@testing-library/react": "^16.2.0",
     "@types/node": "^25.9.3",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "@vitest/coverage-v8": "^3.2.6",
     "jsdom": "^26.0.0",
-    "publint": "^0.3.21",
-    "react": "^19.0.0",
-    "react-aria-components": "^1.18.0",
-    "react-dom": "^19.0.0",
+    "publint": "^0.3.23",
+    "react": "^19.2.8",
+    "react-aria-components": "^1.20.0",
+    "react-dom": "^19.2.8",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0",
     "vitest": "^3.0.0",
-    "vue": "^3.5.0"
+    "vue": "^3.5.41"
   }
 }
