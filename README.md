@@ -68,6 +68,15 @@ install) with three kinds of example. Every one is runnable with
 Because the MSW handlers run in both the browser and the tests, those examples
 exercise the same data lifecycle in CI that you see on the page.
 
+[`handheld-os/`](handheld-os/) is deliberately separate from the examples and
+from the published library: it is a private package with its own lockfile, and
+the package allowlist keeps it out of the npm tarball. The gamepad-first shell
+imports the library through development aliases and serves as a demanding
+integration test for virtualized lists, modal layers, uneven geometry, and
+held input. Run its full check from the repository root with
+`npm run ci:handheld`; when it exposes a library defect, pin that behavior in
+the root regression suite as well.
+
 ## Quick start
 
 ```ts
@@ -151,11 +160,11 @@ components need nothing):
 | `spatial-nav-css/debug` | `attachDebugOverlay()` — paint approximate DOM boxes for focusables, containers, and the current spatial target |
 
 The React provider is safe to render during SSR: it supplies a no-op facade on
-the server and creates the live engine on the client. Navigation, focus, and
-activate methods return `false`; `getFocused()` returns `null`; lifecycle and
-adapter methods are no-ops; and `.engine` throws. `createSpatialNavigation()`
-uses the same facade when called without a DOM; direct `new SpatialEngine()`
-construction requires a DOM root.
+the server and creates the live engine on the client. Navigation, focus,
+focus-claim, activate, and back methods return `false`; `getFocused()` returns
+`null`; lifecycle and adapter methods are no-ops; and `.engine` throws.
+`createSpatialNavigation()` uses the same facade when called without a DOM;
+direct `new SpatialEngine()` construction requires a DOM root.
 
 See [docs/frameworks.md](docs/frameworks.md) for full usage, including the
 Angular/Solid/anything-else pattern.
@@ -309,12 +318,15 @@ receiver, MIDI input, or another host that can produce navigation intents.
 ## Events
 
 All events bubble and are composed, so one listener on the owning `document`
-can observe them within that document. Their targets vary by event:
+can observe them within that document. Every detail carries `direction`,
+`from`, and `source`. Focus-move and no-target events also carry `repeat`,
+which is `true` for a held direction and defaults to `false` for discrete or
+programmatic moves. Their targets vary by event:
 
 | Event | Target | Cancelable | Fired when |
 | --- | --- | --- | --- |
 | `spatial:beforefocus` | would-be target | yes — vetoes the move | before focus moves to a target |
-| `spatial:focus` | new target | — | after focus moved (`detail: { direction, from, source }`) |
+| `spatial:focus` | new target | — | after focus moved; `detail.repeat` marks a held direction |
 | `spatial:nofocustarget` | origin | — | navigation hit the edge — hook to paginate / lazy-load |
 | `spatial:activate` | current spatial target | yes — suppresses the synthetic click | A button / Enter / OK pressed |
 | `spatial:activaterelease` | matching press target through adapters; explicit/current spatial target for a direct engine call | — | activate control released (`detail.durationMs` = hold time, for long-press) |
@@ -332,14 +344,17 @@ transient pressed/hold UI; reserve release for completed hold UX.
 ## Programmatic API
 
 ```ts
-nav.navigate('down')      // move focus; true if it moved
-nav.focus('#search')      // focus element or selector
+nav.navigate('down')       // move focus; true if it moved
+nav.navigate('down', true) // mark an API move as a held repeat
+nav.focus('#search')       // focus element or selector
 nav.focusFirst()
-nav.getFocused()           // current spatial target (see note below)
-nav.activate()             // activates that target
+nav.claimFocus('#result')  // focus only while no eligible owner has it
+nav.getFocused()            // current spatial target (see note below)
+nav.activate()              // activates that target
+nav.back()                  // dispatch spatial:back; true if handled
 nav.addAdapter(adapter); nav.removeAdapter(adapter)
 nav.stop(); nav.destroy()
-nav.engine                // SpatialEngine for advanced use (findTarget, …)
+nav.engine                 // SpatialEngine for advanced use (findTarget, …)
 ```
 
 `getFocused()` names the engine's current spatial target, not a strict alias
@@ -369,12 +384,14 @@ scrolled carousel band) aren't penalized for their breadth.
 
 "Aligned" means the candidate overlaps the origin's projection on the axis
 orthogonal to travel — i.e. it's in the same row (for ←/→) or column (for
-↑/↓) — by at least 20% of the origin's extent (`alignedOverlapRatio`, so a
-1px graze doesn't count as "same row"). With the default finite `1e6`
-misalignment penalty, aligned candidates dominate ordinary viewport-scale
-layouts. That is a bias rather than an absolute guarantee: a sufficiently
-distant aligned candidate can lose, and applications can tune or remove the
-penalty through the `scoring` option.
+↑/↓) — by at least 20% of the smaller projected extent (the origin's or the
+candidate's). That `alignedOverlapRatio` threshold keeps a 1px graze from
+counting as "same row" without penalizing a small control aligned with a much
+wider one. With the default finite `1e6` misalignment penalty, aligned
+candidates dominate ordinary viewport-scale layouts. That is a bias rather
+than an absolute guarantee: a sufficiently distant aligned candidate can
+lose, and applications can tune or remove the penalty through the `scoring`
+option.
 
 Search uses a **library-specific zone model inspired by css-nav-1**: it starts
 in the innermost explicitly marked spatial container and escalates outward
@@ -415,9 +432,8 @@ The release tooling is sized for a single-package public repository:
 
 - **Lint + format**: [Biome](https://biomejs.dev) — one fast tool, enforced
   in CI (`npm run lint`).
-- **Tests**: 239 automated unit/integration tests across 23 Vitest files
-  (jsdom, injectable geometry), with enforced V8 coverage thresholds
-  (`npm run test:coverage`).
+- **Tests**: automated unit/integration suites (jsdom, injectable geometry),
+  with enforced V8 coverage thresholds (`npm run test:coverage`).
 - **Package correctness**: `publint` and `@arethetypeswrong/cli` validate
   the packed tarball's exports and types across multiple consumer-resolution
   profiles in the configured CI quality job.
@@ -427,9 +443,9 @@ The release tooling is sized for a single-package public repository:
   per-PR), dependency review on PRs, and Dependabot for npm + Actions are
   checked in. Repository-level prerequisites are tracked in
   [RELEASE_CHECKLIST.md](https://github.com/SauceTaster/spatial-nav-css/blob/main/RELEASE_CHECKLIST.md).
-- **Dependency-script review metadata**: the root and `examples/`
-  `package.json` files record reviewed lifecycle-script packages in
-  `allowScripts`. After dependency changes, run
+- **Dependency-script review metadata**: the root, `examples/`, and
+  `handheld-os/` `package.json` files record reviewed lifecycle-script packages
+  in `allowScripts`. After dependency changes, run
   `npm approve-scripts --allow-scripts-pending` from each directory and review
   any updates. Treat this field as review metadata, not an install-time
   security boundary.
@@ -440,9 +456,9 @@ The release tooling is sized for a single-package public repository:
   workflow files alone do not establish that a package has been published.
 - `npm run ci` runs lint, typecheck, build, SSR import checks, packed-package
   checks, a React 17 consumer check, and coverage locally. The browser and
-  examples suites have separate local scripts and configured hosted jobs.
-  Other hosted-only work includes the Node matrix, CodeQL, dependency review,
-  and release preparation.
+  independent-package suites have separate local scripts and configured hosted
+  jobs (`npm run ci:examples` and `npm run ci:handheld`). Other hosted-only work
+  includes the Node matrix, CodeQL, dependency review, and release preparation.
 
 ## Notes & roadmap
 

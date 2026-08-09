@@ -34,9 +34,10 @@ export interface SpatialNavigation {
   focusFirst(): boolean
   /**
    * Focus `target` — or the default/first focusable when omitted — but only
-   * while focus is still unclaimed: nothing spatially focused and the
-   * document's active element still the body. Returns false, changing
-   * nothing, once anything holds focus.
+   * while focus is still unclaimed: nothing spatially focused, and DOM focus
+   * is either idle or parked on a non-spatial element inside this root (for
+   * example, a modal's `tabindex="-1"` wrapper). Returns false, changing
+   * nothing, when an eligible stop or anything outside the root owns focus.
    *
    * This is the safe way to focus content that arrives asynchronously.
    * `autofocus` runs once at `start()`, when a data-driven screen is still
@@ -49,7 +50,7 @@ export interface SpatialNavigation {
   getFocused(): HTMLElement | null
   /** Synthesize activation (click) on the focused element. */
   activate(): boolean
-  /** Dispatch spatial:back. Returns true if a listener handled it. */
+  /** Dispatch `spatial:back`. Returns true if a listener handled it. */
   back(): boolean
   addAdapter(adapter: InputAdapter): void
   removeAdapter(adapter: InputAdapter): void

@@ -165,8 +165,11 @@ active-element chain.
 
 **Multiple nav regions.** A region whose root doesn't contain the focused
 element ignores direction input (doesn't consume it, doesn't steal focus).
-First-focus is only claimed when focus is on `<body>`/none (pinned by the
-elements + integration tests).
+First focus is claimed only when no spatial target exists and DOM focus is
+idle (`<body>`/the document root/none) or parked on a non-spatial element
+inside that region, such as a modal's `tabindex="-1"` wrapper. An eligible stop
+or anything outside the root still owns focus, so another region defers. The
+same public predicate is available as `engine.canClaimFocus()`.
 
 **`spatial:beforefocus` veto.** Cancel it and the move silently doesn't
 happen; the origin keeps focus. Use sparingly — a veto with no visible

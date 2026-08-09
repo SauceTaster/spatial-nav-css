@@ -189,7 +189,7 @@ export class SpatialEngine {
         // holds DOM focus becomes navigable again — but no focus event fires
         // to say so. Adopt it rather than letting the restore fallback drag
         // the user to the first focusable on the page.
-        else if (!this.current) this.adoptActiveElement()
+        else this.adoptActiveElement()
       })
       this.removalObserver.observe(this.root, {
         childList: true,
@@ -642,7 +642,7 @@ export class SpatialEngine {
    *
    * That covers the obvious case — no spatial target and the document's
    * active element still the body — plus one that is easy to miss: focus
-   * parked on an element inside this root that the engine could never focus,
+   * parked on an element inside this root that does not qualify as a spatial stop,
    * such as the `tabindex="-1"` wrapper a framework modal's focus trap
    * focuses on open. Nothing owns such an element spatially, so claiming
    * from it is safe; without this, the first direction press after opening a

@@ -93,6 +93,26 @@ jobs:
       - name: Build examples
         run: npm --prefix examples run build
 
+  handheld:
+    name: Handheld OS (integration stress test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            handheld-os/package-lock.json
+      - name: Use the repository npm version
+        run: npm install --global 'npm@11.16.0'
+      - name: Install the standalone harness
+        run: npm ci --prefix handheld-os
+      - name: Install Chromium for Storybook tests
+        run: npm exec --prefix handheld-os -- playwright install --with-deps chromium
+      - name: Run the standalone integration harness
+        run: npm run ci --prefix handheld-os
+
   browsers:
     name: Browser smoke (${{ matrix.browser }})
     runs-on: ubuntu-latest

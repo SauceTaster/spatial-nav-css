@@ -20,7 +20,7 @@ Package entry points:
 Wires an engine to input adapters and returns a `SpatialNavigation`. In a DOM
 environment, an omitted `root` uses `document`. During server rendering with no
 explicit DOM root, the factory returns a deterministic no-op facade:
-`navigate`, `focus`, `focusFirst`, and `activate` return `false`;
+`navigate`, `focus`, `focusFirst`, `claimFocus`, `activate`, and `back` return `false`;
 `getFocused()` returns `null`; lifecycle and adapter methods do nothing; and
 accessing `.engine` throws. A separate client render creates the live engine.
 Direct `new SpatialEngine()` construction requires a DOM root.
@@ -53,13 +53,14 @@ interface SpatialNavigation {
   start(): void                      // begin tracking focus + listening to devices
   stop(): void                       // detach everything; focus state kept
   destroy(): void                    // stop and clear adapters/engine-managed state
-  navigate(direction: Direction): boolean
+  navigate(direction: Direction, repeat?: boolean): boolean
   focus(target: HTMLElement | string): boolean
   focusFirst(): boolean
   claimFocus(target?: HTMLElement | string): boolean  // focus only if unclaimed
   getFocused(): HTMLElement | null   // current spatial target; may persist when
                                      // DOM focus falls back to body
   activate(): boolean                // activate that target; click unless vetoed
+  back(): boolean                    // dispatch spatial:back; true if handled
   addAdapter(adapter: InputAdapter): void
   removeAdapter(adapter: InputAdapter): void
   readonly engine: SpatialEngine
@@ -79,8 +80,11 @@ Behavioral notes:
   to body/nothing so direction or activation can resume there; real focus on a
   different/excluded control makes that region report `null`.
 - A `direction` intent with no current spatial target **claims** focus
-  (`focusFirst`) only if no element anywhere on the page holds real focus, so
-  multiple nav regions don't steal from each other.
+  (`focusFirst`) only when `engine.canClaimFocus()` is true: DOM focus is idle,
+  or it is parked on a non-spatial element inside this engine's root (such as a
+  focus trap's `tabindex="-1"` modal wrapper). Focus on an eligible stop or
+  outside the root remains claimed, so multiple nav regions don't steal from
+  each other.
 - Once the engine owns or successfully claims focus, direction input is
   consumed even at an edge so arrows/sticks do not scroll the page underneath
   that UI. React to edges via `spatial:nofocustarget`. An inactive region does
@@ -91,12 +95,13 @@ Behavioral notes:
   callers remain responsible for targeting a semantic, intentional control.
 - `claimFocus(target?)` applies that same "only if unclaimed" rule to a
   programmatic move: it focuses `target` (or the default/first focusable) only
-  while nothing spatial is focused *and* the document's active element is
-  still the body. It reports `source: 'claim'` on `spatial:focus`, and returns
-  `false` without changing anything otherwise. Use it for content that arrives
-  asynchronously — `autofocus` runs once at `start()`, when a data-driven
-  screen is still skeletons, so the interesting content never receives focus.
-  See [recipes.md](recipes.md) for the pattern.
+  while `engine.canClaimFocus()` is true. It reports `source: 'claim'` on
+  `spatial:focus`, and returns `false` without changing anything otherwise.
+  Use it for content that arrives asynchronously, or to move off a modal's
+  non-spatial focus surface after opening. `autofocus` runs once at `start()`,
+  when a data-driven screen may still be skeletons, so the interesting content
+  never receives focus. See [recipes.md](recipes.md) for the asynchronous
+  pattern.
 
 ## SpatialEngine
 
@@ -107,9 +112,10 @@ operations and engine-only methods are:
 ```ts
 new SpatialEngine(options /* EngineOptions = the non-input subset above */)
 engine.findTarget(dir, from)   // resolve a move without performing it
-engine.navigate(dir, source?)  // move focus
-engine.focus(elOrSelector, { direction?, from?, source? })
+engine.navigate(dir, source?, repeat?)  // move focus
+engine.focus(elOrSelector, { direction?, from?, source?, repeat? })
 engine.focusFirst(detail?)
+engine.canClaimFocus()         // whether first focus may be claimed safely
 engine.activate(source?)
 engine.activateRelease(durationMs, source?, target?)
 engine.activateCancel(source?, target?)
@@ -129,14 +135,17 @@ press ended without a normal release.
 
 ## Events
 
-All `CustomEvent<SpatialEventDetail>`, bubbling and composed.
-`detail = { direction, from, source, repeat }` where `source` is an extensible string:
-an adapter id (`'keyboard'`, `'gamepad'`, a custom id), `'api'`, or an engine
-lifecycle source such as `'autofocus'`, `'claim'`, or `'restore'`. `repeat` is
-`true` when the move came from a *held* control rather than a discrete press —
-only the input adapter knows that, and accelerated list scrolling ("hold to
-speed up, then jump by section") needs it. It is `false` for discrete and
-programmatic moves; `navigate(direction, repeat?)` lets a caller set it.
+All `CustomEvent<SpatialEventDetail>`, bubbling and composed. Every detail has
+`{ direction, from, source }`, where `source` is an extensible string: an
+adapter id (`'keyboard'`, `'gamepad'`, a custom id), `'api'`, or an engine
+lifecycle source such as `'autofocus'`, `'claim'`, or `'restore'`.
+`spatial:beforefocus`, `spatial:focus`, and `spatial:nofocustarget` also carry
+`repeat`. It is `true` when a directional move came from a *held* control rather
+than a discrete press — only the input adapter knows that, and accelerated list
+scrolling ("hold to speed up, then jump by section") needs it. It is `false` for
+discrete moves and defaults to `false` for programmatic moves;
+`navigate(direction, repeat?)` lets a facade caller override that default.
+Other event types omit it.
 
 | Type | Target | Cancelable | Meaning / default action |
 | --- | --- | --- | --- |

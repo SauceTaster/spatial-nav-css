@@ -38,7 +38,7 @@ export function QuickAccess({ overlay }: { overlay: Extract<Overlay, { kind: 'qu
   }, [nav])
 
   return (
-    <aside
+    <div
       className="os-qam"
       ref={panelRef}
       role="dialog"
@@ -74,7 +74,7 @@ export function QuickAccess({ overlay }: { overlay: Extract<Overlay, { kind: 'qu
           </button>
         ))}
       </nav>
-    </aside>
+    </div>
   )
 }
 

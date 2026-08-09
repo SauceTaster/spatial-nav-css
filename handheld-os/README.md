@@ -14,7 +14,7 @@ npm install
 npm run dev          # the OS at http://localhost:5180
 npm run storybook    # components and shell states in isolation
 npm test             # jsdom suite
-npm run ci           # typecheck + test + build
+npm run ci           # unit + browser/a11y story tests, then both builds
 ```
 
 Drive it with **arrows** (D-pad), **Enter** (A), **Escape/Backspace** (B), and
@@ -77,3 +77,5 @@ scroll-dependent.
 Early, but real. The device services are mocked at the `fetch` boundary with
 MSW, so the same handlers serve the app, Storybook and the tests — swapping in
 a real backend is a matter of deleting the worker, not rewriting the views.
+CI runs every story headlessly in Chromium and fails on axe violations; this
+has already caught contrast and invalid-role defects that jsdom could not see.

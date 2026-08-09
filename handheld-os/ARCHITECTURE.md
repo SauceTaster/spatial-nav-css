@@ -90,9 +90,11 @@ target instead.
 
 ## Testing
 
-Same approach as the library's `examples/`: jsdom has no layout, so tests
+Same approach as the library's `examples/`: jsdom has no layout, so unit tests
 describe geometry explicitly and let the engine run its real measurement path.
-Storybook covers the visual and interaction dimension a jsdom test cannot.
+The Storybook Vitest project renders every story in headless Chromium and runs
+the a11y addon with violations set to errors, covering browser and accessibility
+behavior that jsdom and a static Storybook build cannot.
 
 Two environment traps, both of which look like navigation bugs:
 

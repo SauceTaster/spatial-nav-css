@@ -33,17 +33,18 @@ export interface ScoringOptions {
    */
   centerWeight: number
   /**
-   * Minimum orthogonal overlap — as a fraction of the origin's extent on
-   * that axis — for a candidate to count as "aligned" (same row/column).
+   * Minimum orthogonal overlap — as a fraction of the smaller of the origin's
+   * and candidate's extents on that axis — for a candidate to count as
+   * "aligned" (same row/column).
    * A 1px sliver overlap should not grant same-row priority over a near
-   * diagonal neighbor; 0.2 requires a meaningful overlap with the origin's
-   * projected span. Set 0 for any-overlap alignment. Engine options accept a
-   * finite value from 0 through 1.
+   * diagonal neighbor; 0.2 requires a meaningful overlap relative to the
+   * narrower projected span. Set 0 for any-overlap alignment. Engine options
+   * accept a finite value from 0 through 1.
    */
   alignedOverlapRatio: number
   /**
-   * Flat penalty added to candidates whose projection on the orthogonal
-   * axis does not overlap the origin at all (i.e. not in the same
+   * Flat penalty added to candidates whose projection on the orthogonal axis
+   * does not meet `alignedOverlapRatio` (i.e. not meaningfully in the same
    * row/column). Large by default so aligned candidates dominate ordinary
    * viewport-scale layouts.
    */

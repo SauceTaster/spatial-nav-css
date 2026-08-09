@@ -32,7 +32,7 @@ const preview: Preview = {
     layout: 'fullscreen',
     backgrounds: { disable: true },
     controls: { expanded: true },
-    a11y: { test: 'todo' },
+    a11y: { test: 'error' },
     docs: {
       description: {
         component:

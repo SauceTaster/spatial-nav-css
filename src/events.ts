@@ -35,7 +35,9 @@ export interface SpatialEventDetail {
    * True when this move came from a *held* direction rather than a discrete
    * press. Accelerated list scrolling — "hold down to speed up, then jump by
    * section" — needs to tell the two apart, and only the adapter knows.
-   * Absent for non-directional events and programmatic calls.
+   * Present on directional focus and no-target events; false for discrete
+   * moves unless a programmatic caller explicitly marks the move as repeated.
+   * Absent for non-directional events.
    */
   repeat?: boolean
 }

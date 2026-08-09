@@ -82,6 +82,9 @@ review](https://docs.github.com/en/code-security/concepts/supply-chain-security/
       the wording automatically.
 - [ ] The example package installs from its lockfile and passes typecheck, tests,
       and production build.
+- [ ] The private `handheld-os` integration harness installs independently and
+      passes typecheck, application tests, real-browser Storybook/a11y tests,
+      production build, and Storybook build.
 - [ ] `npm pack --dry-run` contains every required runtime, type, CSS, license,
       and documentation file and no secrets, local artifacts, or unintended
       source files.
@@ -93,7 +96,8 @@ review](https://docs.github.com/en/code-security/concepts/supply-chain-security/
       CDN path). Confirm `llms.txt` and a fresh `llms-full.txt`
       (`npm run check:llms`) are in the tarball.
 - [ ] Run `npm run audit:all` and review production and development findings for
-      all three lockfiles: root, `examples/`, and `tests/compat/react17/`.
+      all four lockfiles: root, `examples/`, `handheld-os/`, and
+      `tests/compat/react17/`.
       Resolve, document, or explicitly accept each finding; dependencies outside
       the published tarball can still compromise CI or contributors.
 - [ ] Review the diff from the last release, version number, license and

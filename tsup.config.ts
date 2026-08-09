@@ -16,15 +16,17 @@ export default defineConfig([
     format: ['esm', 'cjs'],
     dts: true,
     sourcemap: true,
-    clean: true,
+    // Both configs are built concurrently by tsup. The package scripts clean
+    // `dist` once before either build starts so neither config can delete the
+    // other's output.
+    clean: false,
     target: 'es2020',
     platform: 'browser',
     external: ['react', 'vue'],
   },
   {
     // CDN/script-tag bundle: window.SpatialNav with the framework-free
-    // surface (core + elements + dialogs + virtual + debug). Runs after the
-    // main config, so `clean` must stay off here.
+    // surface (core + elements + dialogs + virtual + debug).
     entry: { 'spatial-nav': 'src/global.ts' },
     format: ['iife'],
     globalName: 'SpatialNav',

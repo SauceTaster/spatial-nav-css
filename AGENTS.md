@@ -24,12 +24,16 @@ npm run build          # tsup → dist/ (ESM + CJS + d.ts per subpath)
 npm run ci             # everything CI runs: lint, typecheck, build,
                        #   SSR check, package check, react17 check, coverage
 npm run test:browser   # Playwright smoke tests (needs build first; it does it)
+npm run ci:handheld    # install + unit/browser/a11y test + build the separate stress app
 npm run demo           # build + demo gallery at http://localhost:4173/demo/
 npm run build:llms     # regenerate llms-full.txt from README + docs/
 ```
 
 The `examples/` directory is a **separate npm package** with its own lockfile
 (`npm run ci:examples` from the root, or `npm --prefix examples ...`).
+`handheld-os/` is another separate, private package. It is not part of the npm
+artifact; CI installs it independently and uses its application-shaped tests to
+find integration bugs against the library source.
 
 ## Layout
 
@@ -44,6 +48,7 @@ The `examples/` directory is a **separate npm package** with its own lockfile
 | `browser-tests/` | Playwright real-browser smoke specs |
 | `demo/` | self-contained HTML pages importing `../dist` — require a build |
 | `examples/` | standalone Vite package. `src/app-*` are full applications (MSW-mocked network + TanStack Query), `src/lib-*` are component-library integrations, the rest are framework/pattern examples. `src/shared/` holds the mock API, the app shell, and `layout.ts` — the jsdom layout simulator that makes app-shaped spatial tests possible |
+| `handheld-os/` | private standalone application package and integration stress harness; aliases `src/` directly, owns its lockfile, and never ships in the library tarball |
 | `docs/` | reference docs — shipped in the npm package |
 | `bench/` | vitest bench files (`npm run bench`) |
 
@@ -81,6 +86,8 @@ The `examples/` directory is a **separate npm package** with its own lockfile
   spec in `browser-tests/` too.
 - `npm run test:coverage` runs in CI; keep new modules covered rather than
   chasing a global number.
+- Changes that affect real application behavior should also pass
+  `npm run ci:handheld`; keep this package independently installable.
 
 ## Gotchas
 

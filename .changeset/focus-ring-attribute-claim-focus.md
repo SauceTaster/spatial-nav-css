@@ -16,11 +16,12 @@ library:
   `[data-spatial-focused]` over `.spatial-focused` in application CSS.
 
 - **New `nav.claimFocus(target?)`** — focus a target (or the default/first
-  focusable) only while focus is still unclaimed: nothing spatially focused and
-  the document's active element still the body. `autofocus` is a one-shot that
-  runs at `start()`, when a data-driven screen is still skeletons, so content
-  that arrives later never received focus; calling `claimFocus()` when the data
+  focusable) only while focus is still unclaimed: nothing is spatially focused,
+  and DOM focus is idle or parked on a non-spatial element inside the engine
+  root. An eligible stop or focus outside the root remains claimed, so another
+  navigation region cannot steal it. `autofocus` is a one-shot that runs at
+  `start()`, when a data-driven screen is still skeletons, so content that
+  arrives later never receives focus; calling `claimFocus()` when the data
   lands fills that gap without yanking focus from a user who already started
-  navigating, or from a second navigation region. It reports
-  `source: 'claim'` on `spatial:focus`. See the new
+  navigating. It reports `source: 'claim'` on `spatial:focus`. See the new
   "Focusing content that loads asynchronously" recipe.

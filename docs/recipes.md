@@ -116,7 +116,9 @@ nothing moves it when the real content arrives.
 
 Use `claimFocus()` when the data lands. It focuses the target only while
 focus is still unclaimed, so it fills the gap without yanking focus away from
-someone who already started navigating (or from a second nav region):
+someone who already started navigating (or from a second nav region). Idle DOM
+focus counts as unclaimed, as does focus parked on a non-spatial wrapper inside
+the engine root; an eligible stop or focus outside the root remains claimed:
 
 ```ts
 const nav = createSpatialNavigation() // note: no autofocus

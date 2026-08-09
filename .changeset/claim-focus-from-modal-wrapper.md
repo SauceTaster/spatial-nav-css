@@ -9,8 +9,8 @@ surface on open. The engine had no spatial target, but saw a non-body
 the first direction press was swallowed too. Nothing owned that element
 spatially, so there was no reason to defer to it.
 
-Focus parked on an element *inside the root that the engine could never focus*
-now counts as unclaimed, while focus on a real stop — possibly another
+Focus parked on an element *inside the root that does not qualify as a spatial
+stop* now counts as unclaimed, while focus on a real stop — possibly another
 navigation region's — still does not, so regions continue not to steal from
 each other. The rule is available directly as `engine.canClaimFocus()`.
 

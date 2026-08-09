@@ -181,8 +181,9 @@
     "web-components"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "clean:dist": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean:dist && tsup",
+    "dev": "npm run clean:dist && tsup --watch",
     "typecheck": "tsc --noEmit",
     "lint": "biome ci .",
     "lint:fix": "biome check --write .",
@@ -197,8 +198,9 @@
     "check:react17": "npm run build && node scripts/check-react17.mjs",
     "check:ssr": "node scripts/check-ssr.mjs",
     "ci:examples": "npm ci --prefix examples && npm run typecheck --prefix examples && npm test --prefix examples && npm run build --prefix examples",
+    "ci:handheld": "npm ci --prefix handheld-os && npm exec --prefix handheld-os -- playwright install chromium && npm run ci --prefix handheld-os",
     "audit:runtime": "npm audit --omit=dev && npm audit --prefix examples --omit=dev",
-    "audit:all": "npm audit && npm audit --prefix examples && npm audit --prefix tests/compat/react17",
+    "audit:all": "npm audit && npm audit --prefix examples && npm audit --prefix handheld-os && npm audit --prefix tests/compat/react17",
     "build:llms": "node scripts/build-llms.mjs",
     "check:llms": "node scripts/build-llms.mjs --check",
     "ci": "npm run lint && npm run typecheck && npm run check:llms && npm run build && npm run check:ssr && npm run check:package && npm run check:react17 && npm run test:coverage",

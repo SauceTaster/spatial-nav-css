@@ -7,8 +7,9 @@ By participating, you agree to follow the
 
 ## Setup
 
-Use Node.js 22 or newer (matching the package `engines` field) and npm 11.16.0
-(matching `packageManager`), then install the exact locked dependency graph:
+Use Node.js 22 or newer (matching the package `devEngines` tooling entry) and
+npm 11.16.0 (matching `packageManager`), then install the exact locked
+dependency graph:
 
 ```bash
 npm ci
@@ -27,7 +28,9 @@ Day-to-day commands:
 | `npm run build` | Build ESM, CJS, and declarations for every entry point |
 | `npm run check:package` | Validate the packed package with publint and Are the Types Wrong |
 | `npm run check:ssr` | Verify server-side imports do not require browser globals |
-| `npm run audit:all` | Audit the root, examples, and React 17 fixture lockfiles |
+| `npm run ci:examples` | Install and check the independent framework examples package |
+| `npm run ci:handheld` | Install and check the private handheld integration package |
+| `npm run audit:all` | Audit the root, examples, handheld, and React 17 fixture lockfiles |
 | `npm run bench` | Run geometry and engine microbenchmarks |
 | `npm run demo` | Build and serve the demo gallery at `localhost:4173/demo/` |
 
@@ -41,6 +44,14 @@ npm --prefix examples test
 npm --prefix examples run build
 ```
 
+`handheld-os/` is a separate private integration-test package with its own
+lockfile. It is never shipped in the library tarball; development aliases make
+it exercise the current library source as a demanding consumer application.
+Run `npm run ci:handheld` when engine, React binding, virtualization, overlay,
+or input behavior changes. If the app exposes a library bug, add the smallest
+corresponding regression to the root test suite rather than relying on the app
+test alone.
+
 ## Making changes
 
 1. Branch from `main`.
@@ -49,13 +60,14 @@ npm --prefix examples run build
    semantics are assertable without a browser.
 3. For a user-facing change, add a changeset with `npx changeset`. Select the
    SemVer impact and write a user-focused sentence.
-4. Run `npm run ci` locally. Run the examples checks above when relevant, then
-   open a pull request.
+4. Run `npm run ci` locally. Run the independent package checks above when
+   relevant, then open a pull request.
 
 CI checks linting, types, builds, packed-package correctness, SSR import safety,
-coverage on Node.js 22/24/26, Chromium/Firefox/WebKit smoke tests, and the framework examples. CodeQL is
-configured separately. Dependency review becomes enforceable only after the
-repository dependency graph is enabled; see
+coverage on Node.js 22/24/26, Chromium/Firefox/WebKit smoke tests, the framework
+examples, and the private handheld integration package. CodeQL is configured
+separately. Dependency review becomes enforceable only after the repository
+dependency graph is enabled; see
 [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 
 ## Conventions
