@@ -19,9 +19,10 @@ setting is enabled.
 - [ ] Enable secret scanning and push protection if they are available for the
       repository plan.
 - [ ] Protect `main` with a branch rule or ruleset requiring pull requests,
-      dismissal of stale approvals, Code Owner review for sensitive files, and
-      successful CI, examples, CodeQL, and dependency-review checks. Restrict
-      force pushes and deletion.
+      successful CI, examples, handheld integration, CodeQL, and
+      dependency-review checks. Restrict force pushes and deletion. Require
+      Code Owner review once a second qualified reviewer is available; a sole
+      maintainer cannot approve their own pull request.
 - [ ] Keep the default GitHub Actions token permission read-only. Separately
       enable **Allow GitHub Actions to create and approve pull requests** so the
       Changesets action can maintain its version pull request. The workflow's
@@ -29,8 +30,9 @@ setting is enabled.
 - [ ] Restrict allowed Actions to GitHub-owned and explicitly reviewed actions.
       Pin action references to reviewed full commit SHAs and let Dependabot
       propose updates.
-- [ ] Verify `CODEOWNERS` resolves to an account with review access, then require
-      Code Owner review in the branch rule.
+- [ ] Verify `CODEOWNERS` resolves to accounts with review access. Once the
+      repository has a second qualified reviewer, require Code Owner review and
+      dismissal of stale approvals in the branch rule.
 
 ## One-time npm setup
 
