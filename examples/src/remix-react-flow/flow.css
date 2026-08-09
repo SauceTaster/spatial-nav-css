@@ -5,5 +5,5 @@
 .flow-node {
   min-width: 96px; text-align: center; padding: 10px 14px; border-radius: 8px;
   font-size: 13px; background: linear-gradient(160deg, #2a475e, #1b2838);
-  color: var(--text); cursor: pointer; user-select: none;
+  color: var(--text); cursor: pointer; border: 0;
 }

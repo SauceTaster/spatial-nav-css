@@ -6,8 +6,22 @@ import type { Direction } from '../core/types'
  */
 export type NavIntent =
   | { type: 'direction'; direction: Direction; repeat: boolean; source: string; originalEvent?: Event }
-  | { type: 'activate'; source: string; originalEvent?: Event }
-  | { type: 'release'; durationMs: number; source: string; originalEvent?: Event }
+  | { type: 'activate'; source: string; activationId?: string; originalEvent?: Event }
+  | {
+      type: 'release'
+      durationMs: number
+      source: string
+      /** Matches a release to its activate press when a source supports concurrent holds. */
+      activationId?: string
+      originalEvent?: Event
+    }
+  | {
+      /** Drop a stored activate press without announcing a release. */
+      type: 'activationcancel'
+      source: string
+      activationId?: string
+      originalEvent?: Event
+    }
   | { type: 'back'; source: string; originalEvent?: Event }
 
 export interface AdapterContext {
@@ -24,7 +38,11 @@ export interface AdapterContext {
  * Steamworks action sets, dedicated IR receivers, Kinect, MIDI, whatever.
  */
 export interface InputAdapter {
-  /** Stable identifier, surfaced as `source` on intents and spatial events. */
+  /**
+   * Stable adapter identifier. Use the same value for the intents' `source`
+   * when events should report this adapter; InputManager does not rewrite
+   * caller-supplied source strings.
+   */
   readonly id: string
   start(context: AdapterContext): void
   stop(): void

@@ -1,0 +1,125 @@
+.gv-root {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding: 18px var(--os-pad) 26px;
+  overflow-y: auto;
+}
+
+/* ------------------------------------------------------------------ hero */
+.gv-hero {
+  position: relative;
+  display: grid;
+  align-items: end;
+  min-height: 210px;
+  border-radius: var(--os-r-lg);
+  overflow: hidden;
+  background: var(--os-surface);
+}
+.gv-hero-art {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 120% at 78% 12%, hsl(var(--hue, 210) 62% 42%), transparent 62%),
+    linear-gradient(160deg, hsl(var(--hue, 210) 48% 26%), hsl(var(--hue, 210) 40% 11%));
+}
+.gv-hero-text {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  padding: 20px;
+  background: linear-gradient(0deg, rgb(6 10 14 / 0.86), transparent);
+}
+.gv-title {
+  margin: 0;
+  font-size: 27px;
+  line-height: 1.15;
+  font-weight: 700;
+}
+.gv-developer {
+  margin: 0;
+  font-size: 13px;
+  color: var(--os-text-dim);
+}
+.gv-compat {
+  margin: 4px 0 0;
+  justify-self: start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--os-surface-3);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.gv-compat.is-verified {
+  color: var(--os-compat-verified);
+}
+.gv-compat.is-playable {
+  color: var(--os-compat-playable);
+}
+.gv-compat.is-unsupported {
+  color: var(--os-compat-unsupported);
+}
+.gv-compat.is-unknown {
+  color: var(--os-text-faint);
+}
+
+/* -------------------------------------------------------------- progress */
+.gv-progress {
+  display: grid;
+  gap: 7px;
+}
+.gv-progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--os-surface-3);
+  overflow: hidden;
+}
+.gv-progress-fill {
+  height: 100%;
+  background: var(--os-accent-strong);
+  transition: width 240ms linear;
+}
+.gv-progress p {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------- actions */
+.gv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.gv-play {
+  min-width: 168px;
+}
+.gv-actions .os-btn[aria-pressed='true'] {
+  color: var(--os-warn);
+}
+
+/* ----------------------------------------------------------------- facts */
+.gv-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.gv-fact {
+  padding: 12px 14px;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface);
+}
+.gv-fact dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--os-text-faint);
+}
+.gv-fact dd {
+  margin: 3px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

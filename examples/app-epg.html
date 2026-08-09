@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EPG / TV guide — spatial-nav-css</title>
+</head>
+<body>
+<div class="ex-head">
+  <a class="back" href="/">← all examples</a>
+  <h1><span class="lib">📺 EPG / TV guide</span> — a 2D virtualized time × channel grid</h1>
+  <p>The hardest spatial-navigation shape there is: blocks are as wide as they are long,
+     so rows never line up. Pressing <kbd>↓</kbd> from a two-hour film lands on whatever is
+     actually below that point in time, not on the next channel's midnight programme.
+     Channel rows are windowed with <strong>@tanstack/react-virtual</strong> and bridged with
+     <code>attachVirtualEdges</code>; data comes from <strong>MSW</strong> via
+     <strong>TanStack Query</strong>. <kbd>←↑↓→</kbd> moves, <kbd>Enter</kbd> records.</p>
+</div>
+<div id="app"></div>
+<script type="module" src="/src/app-epg/main.tsx"></script>
+</body>
+</html>

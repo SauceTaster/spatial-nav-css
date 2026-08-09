@@ -1,7 +1,7 @@
 /**
- * Default selector for spatially focusable elements. Mirrors browser
- * focusability plus an opt-in `data-focusable` hook for non-interactive
- * elements (cards, tiles) that should participate in navigation.
+ * Default selector for spatially focusable elements. Covers common browser
+ * focus stops plus an opt-in `data-focusable` hook for non-interactive
+ * elements that intentionally participate in navigation.
  *
  * An explicit tabindex="-1" on a native widget means "not a stop" — e.g. a
  * slider nested inside a focusable settings row. The exception is
@@ -14,11 +14,51 @@ export const DEFAULT_FOCUSABLE_SELECTOR = [
   'input:not(:disabled):not([type="hidden"]):not([tabindex="-1"])',
   'select:not(:disabled):not([tabindex="-1"])',
   'textarea:not(:disabled):not([tabindex="-1"])',
-  '[tabindex]:not([tabindex="-1"])',
+  'details > summary:first-of-type',
+  '[contenteditable]:not([contenteditable="false"])',
+  'audio[controls]',
+  'video[controls]',
+  'iframe',
+  '[tabindex]',
   '[data-focusable]',
 ].join(', ')
 
-export function isElementVisible(el: HTMLElement): boolean {
+/** Match the configured selector while enforcing native disabled/tab-stop semantics. */
+export function matchesFocusableSelector(
+  el: HTMLElement,
+  selector: string = DEFAULT_FOCUSABLE_SELECTOR,
+): boolean {
+  try {
+    if (!el.matches(selector) || el.matches(':disabled')) return false
+  } catch {
+    return false
+  }
+  // The default selector treats all negative tabindex values as an explicit
+  // opt-out. `data-focusable` is the one deliberate exception: the engine
+  // gives those elements tabindex=-1 so they can receive programmatic focus.
+  if (
+    selector === DEFAULT_FOCUSABLE_SELECTOR &&
+    !el.hasAttribute('data-focusable') &&
+    el.hasAttribute('tabindex') &&
+    el.tabIndex < 0
+  ) {
+    return false
+  }
+  return true
+}
+
+/**
+ * Semantic reachability: is this element navigable *in principle*, ignoring
+ * how it is painted?
+ *
+ * This is deliberately separate from the rendering check below, because a
+ * custom `visibilityFilter` replaces only the latter. Modal containment for
+ * every portaled overlay library (Radix, Headless UI, Ark, MUI, …) rests on
+ * `aria-hidden` being applied to the rest of the page, so folding that into
+ * a replaceable predicate meant an app supplying its own filter silently lost
+ * the ability to keep focus inside its own modals.
+ */
+export function isSemanticallyNavigable(el: HTMLElement): boolean {
   if (el.closest('[aria-hidden="true"], [inert], [hidden]')) return false
   // A native modal dialog (showModal) focus-blocks everything outside the
   // top layer without setting any attribute — only its subtree is navigable
@@ -34,15 +74,31 @@ export function isElementVisible(el: HTMLElement): boolean {
       // data-spatial-container="contain" on the dialog.
     }
   }
-  // Native fast path: one engine call covering display, visibility, and
-  // content-visibility — much cheaper than getComputedStyle per element.
+  return true
+}
+
+/** Is the element actually painted? Replaceable via `visibilityFilter`. */
+export function isRendered(el: HTMLElement): boolean {
+  // Native fast path: one engine call covering rendered boxes and CSS
+  // visibility — much cheaper than getComputedStyle per element. Both
+  // spellings of the option are required: `visibilityProperty` arrived in
+  // Chromium 121 / Firefox 122, while earlier engines (including the
+  // Chromium ~108 builds on current Tizen/webOS TVs) only understand
+  // `checkVisibilityCSS` and silently drop the unknown member — which would
+  // otherwise degrade this call to a rendered-box check that lets
+  // `visibility: hidden` elements receive spatial focus.
   if (typeof el.checkVisibility === 'function') {
-    return el.checkVisibility({ checkVisibilityCSS: true })
+    return el.checkVisibility({ checkVisibilityCSS: true, visibilityProperty: true })
   }
   if (el.getClientRects().length === 0) return false
   const style = el.ownerDocument.defaultView?.getComputedStyle(el)
   if (style && (style.visibility === 'hidden' || style.visibility === 'collapse')) return false
   return true
+}
+
+/** The default focusability filter: semantically reachable *and* painted. */
+export function isElementVisible(el: HTMLElement): boolean {
+  return isSemanticallyNavigable(el) && isRendered(el)
 }
 
 export function getFocusables(
@@ -53,14 +109,14 @@ export function getFocusables(
   const all = scope.querySelectorAll<HTMLElement>(selector)
   const out: HTMLElement[] = []
   for (const el of all) {
-    if (visibilityFilter(el)) out.push(el)
+    if (matchesFocusableSelector(el, selector) && visibilityFilter(el)) out.push(el)
   }
   return out
 }
 
 /** True when key events on this element should be left alone (text entry). */
 export function isEditable(el: EventTarget | null): boolean {
-  if (!(el instanceof HTMLElement)) return false
+  if (!isHTMLElementNode(el)) return false
   if (el.isContentEditable) return true
   const tag = el.tagName
   if (tag === 'TEXTAREA' || tag === 'SELECT') return true
@@ -87,7 +143,7 @@ export function ownerDocumentOf(root: Document | HTMLElement): Document {
  * iframes); duck-types on element nodeType plus style.
  */
 export function isHTMLElementNode(value: unknown): value is HTMLElement {
-  if (value instanceof HTMLElement) return true
+  if (typeof HTMLElement !== 'undefined' && value instanceof HTMLElement) return true
   return (
     typeof value === 'object' &&
     value !== null &&

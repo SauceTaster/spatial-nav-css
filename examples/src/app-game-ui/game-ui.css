@@ -1,0 +1,151 @@
+.gu-root {
+  display: grid;
+  gap: 16px;
+}
+.gu-hud {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 170px;
+  gap: 20px;
+  align-items: start;
+}
+.gu-menu {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.gu-menu-item {
+  padding: 12px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #16202c;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  letter-spacing: 0.04em;
+}
+.gu-menu-item.is-active {
+  background: #1f3242;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.gu-panel {
+  padding: 16px 18px 20px;
+  border-radius: 12px;
+  background: #131a24;
+  min-height: 320px;
+}
+.gu-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.gu-panel-head h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.gu-points {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.6;
+}
+.gu-inventory {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.gu-item {
+  display: grid;
+  align-content: space-between;
+  gap: 6px;
+  min-height: 60px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: #1c2836;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  border-left: 3px solid transparent;
+}
+.gu-item-weapon { border-left-color: #d1615d; }
+.gu-item-armor { border-left-color: #6a9fd4; }
+.gu-item-consumable { border-left-color: #7fb069; }
+.gu-item-material { border-left-color: #c9a227; }
+.gu-item.is-carried {
+  background: #2a3a4d;
+}
+.gu-item-name {
+  font-size: 12px;
+  line-height: 1.25;
+}
+.gu-item-qty {
+  font-size: 11px;
+  opacity: 0.55;
+}
+.gu-tree {
+  display: grid;
+  gap: 26px;
+}
+.gu-tier {
+  display: flex;
+  gap: 14px;
+}
+.gu-node {
+  display: grid;
+  gap: 4px;
+  width: 120px;
+  padding: 10px;
+  border: 1px solid #2a3a4d;
+  border-radius: 8px;
+  background: #16202c;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  opacity: 0.55;
+}
+.gu-node.is-available {
+  opacity: 1;
+  border-color: #3d6b8a;
+}
+.gu-node.is-owned {
+  opacity: 1;
+  background: #1f3242;
+  border-color: var(--accent);
+}
+.gu-node-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+.gu-node-cost {
+  font-size: 11px;
+  opacity: 0.6;
+}
+.gu-abilities {
+  display: grid;
+  gap: 10px;
+}
+.gu-slot {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #16202c;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.gu-slot-key {
+  font: 11px ui-monospace, monospace;
+  color: var(--accent);
+}
+.gu-slot-item {
+  font-size: 12px;
+  opacity: 0.75;
+}
+.gu-log {
+  font: 12px/1.6 ui-monospace, monospace;
+  opacity: 0.75;
+  min-height: 1.6em;
+}

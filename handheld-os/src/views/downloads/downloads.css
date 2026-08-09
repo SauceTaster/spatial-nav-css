@@ -1,0 +1,227 @@
+.dv-root {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 18px var(--os-pad);
+  min-height: 0;
+}
+
+/* ---------------------------------------------------------------- toolbar */
+.dv-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 12px 14px;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface);
+}
+.dv-search {
+  min-width: 200px;
+  padding: 9px 12px;
+  border: 1px solid var(--os-line);
+  border-radius: var(--os-r-sm);
+  background: var(--os-surface-2);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+.dv-facet {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dv-facet-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--os-text-faint);
+}
+.dv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--os-surface-2);
+  color: var(--os-text-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.dv-chip.is-on {
+  background: var(--os-accent-strong);
+  color: #05121d;
+}
+.dv-chip-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+.dv-clear {
+  margin-left: auto;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--os-r-sm);
+  background: var(--os-surface-3);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.dv-clear[aria-disabled='true'] {
+  opacity: 0.4;
+}
+.dv-count {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ table */
+.dv-table-wrap {
+  min-height: 0;
+  overflow: auto;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface);
+}
+.dv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.dv-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 12px;
+  background: var(--os-surface-2);
+  border-bottom: 1px solid var(--os-line);
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--os-text-faint);
+  white-space: nowrap;
+}
+.dv-table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--os-line);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.dv-table tr:last-child td {
+  border-bottom: 0;
+}
+.dv-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--os-r-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.dv-sort-glyph {
+  font-size: 9px;
+  opacity: 0.7;
+}
+.dv-title {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--os-r-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+}
+.dv-kind {
+  color: var(--os-text-dim);
+}
+.dv-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.dv-state::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+.dv-state.is-downloading {
+  color: var(--os-accent);
+}
+.dv-state.is-done {
+  color: var(--os-good);
+}
+.dv-state.is-paused {
+  color: var(--os-warn);
+}
+.dv-state.is-failed {
+  color: var(--os-bad);
+}
+.dv-state.is-queued {
+  color: var(--os-text-faint);
+}
+.dv-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.dv-progress-track {
+  width: 84px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--os-surface-3);
+  overflow: hidden;
+}
+.dv-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--os-accent);
+}
+.dv-progress-value {
+  min-width: 4ch;
+  font-variant-numeric: tabular-nums;
+  color: var(--os-text-dim);
+}
+.dv-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+.dv-act {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--os-r-sm);
+  background: var(--os-surface-3);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.dv-act-danger {
+  color: var(--os-bad);
+}
+.dv-act[aria-disabled='true'] {
+  opacity: 0.4;
+}
+.dv-empty {
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--os-text-faint);
+}

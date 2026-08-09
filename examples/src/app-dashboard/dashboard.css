@@ -1,0 +1,255 @@
+.dash-root {
+  display: grid;
+  gap: 16px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.dash-head h1 {
+  margin: 0;
+  font-size: 20px;
+}
+.dash-muted {
+  margin: 2px 0 0;
+  font-size: 12px;
+  opacity: 0.62;
+}
+.dash-panel {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #131a24;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.dash-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.dash-panel-head h2 {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.55;
+}
+
+/* ------------------------------------------------------------- tiles ---- */
+.dash-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.dash-tile {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, #1b2838, #121924);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+.dash-tile.is-warn {
+  box-shadow: inset 0 0 0 1px rgba(240, 162, 75, 0.35);
+}
+.dash-tile-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.5;
+}
+.dash-tile-value {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.dash-tile-detail {
+  font-size: 11px;
+  opacity: 0.6;
+}
+.dash-tile-skeleton {
+  height: 88px;
+  background: linear-gradient(100deg, #131a24, #1b2531, #131a24);
+}
+
+/* ------------------------------------------------------ charts row ---- */
+.dash-mid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 16px;
+  align-items: start;
+}
+.dash-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.dash-control {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 7px;
+  background: #1d2836;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+.dash-control.is-active {
+  background: #24384e;
+  box-shadow: inset 0 2px 0 var(--series, #1a9fff);
+}
+.dash-control[aria-disabled='true'] {
+  opacity: 0.45;
+}
+.dash-canvas {
+  overflow-x: auto;
+}
+.dash-services {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.dash-service {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 7px;
+  background: #18202b;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+.dash-service.is-failing .dash-service-state {
+  color: #f0a24b;
+}
+.dash-service-state,
+.dash-service-cpu {
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+/* -------------------------------------------------------------- grid ---- */
+.dash-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.dash-input {
+  flex: 0 1 260px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 7px;
+  background: #18202b;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+.dash-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.dash-th {
+  padding: 0 0 6px;
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+  font-weight: 600;
+}
+.dash-sort {
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.dash-td {
+  padding: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.dash-td-control {
+  width: 34px;
+  padding: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.dash-table tr.is-selected .dash-td,
+.dash-table tr.is-selected .dash-td-control {
+  background: #182636;
+}
+.dash-check {
+  width: 15px;
+  height: 15px;
+  accent-color: #1a9fff;
+}
+
+/* --------------------------------------------------------- log panel ---- */
+.dash-log-scroll {
+  position: relative;
+  height: 238px;
+  overflow-y: auto;
+}
+.dash-log-inner {
+  position: relative;
+  width: 100%;
+}
+.dash-log-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: 74px 52px 130px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 0 8px;
+  border-radius: 6px;
+  font: 12px/1 ui-monospace, monospace;
+}
+.dash-log-level {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.dash-log-row.is-error .dash-log-level {
+  color: #ff7b72;
+}
+.dash-log-row.is-warn .dash-log-level {
+  color: #f0a24b;
+}
+.dash-log-time,
+.dash-log-service {
+  opacity: 0.6;
+}
+.dash-foot {
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+/*
+  Focus treatment keys off the attribute, not the class: React rewrites
+  className on every render, which would drop `.spatial-focused` between the
+  engine setting it and the next paint. The engine writes both, and nothing
+  in the tree renders `data-spatial-focused`, so the attribute survives.
+*/
+[data-spatial-focused].dash-tile,
+[data-spatial-focused].dash-service,
+[data-spatial-focused].dash-td,
+[data-spatial-focused].dash-log-row {
+  background: #1f3242;
+}
+[data-spatial-focused].dash-td,
+[data-spatial-focused].dash-log-row {
+  box-shadow: inset 0 0 0 1px #1a9fff;
+}

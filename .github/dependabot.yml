@@ -8,6 +8,31 @@ updates:
       dev-dependencies:
         dependency-type: development
         update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: /examples
+    schedule:
+      interval: weekly
+    groups:
+      example-dependencies:
+        update-types: [minor, patch]
+  # Private, independently installed integration harness. It consumes the
+  # library source but is never included in the published package.
+  - package-ecosystem: npm
+    directory: /handheld-os
+    schedule:
+      interval: weekly
+    groups:
+      handheld-integration-dependencies:
+        update-types: [minor, patch]
+  # This legacy compatibility fixture intentionally stays on React 17 and
+  # TypeScript 5.5; patch-only proposals preserve that tested baseline.
+  - package-ecosystem: npm
+    directory: /tests/compat/react17
+    schedule:
+      interval: weekly
+    groups:
+      react17-compatibility-fixture:
+        update-types: [patch]
   - package-ecosystem: github-actions
     directory: /
     schedule:

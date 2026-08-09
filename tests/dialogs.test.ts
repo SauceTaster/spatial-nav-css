@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { spatialAlert, spatialConfirm } from '../src/dialogs/index'
 import { SpatialEngine } from '../src/core/engine'
 import { rect } from './helpers'
@@ -15,12 +15,51 @@ afterEach(() => {
 })
 
 describe('spatialAlert', () => {
+  it('rejects a detached mount instead of leaving a nonfunctional dialog behind', async () => {
+    const mount = document.createElement('div')
+    await expect(spatialAlert('Saved', { mount })).rejects.toThrow(/mount must be connected/)
+    expect(mount.querySelector('dialog')).toBeNull()
+
+    document.body.innerHTML = `<button id="prior">Prior</button>`
+    const prior = document.getElementById('prior')!
+    prior.focus()
+    const showModal = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'showModal')
+    const close = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'close')
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+      configurable: true,
+      value: vi.fn(() => {
+        throw new Error('host rejected modal')
+      }),
+    })
+    Object.defineProperty(HTMLDialogElement.prototype, 'close', {
+      configurable: true,
+      value: vi.fn(),
+    })
+    try {
+      await expect(spatialAlert('Saved')).rejects.toThrow(/host rejected modal/)
+      expect(document.querySelector('dialog')).toBeNull()
+      expect(document.activeElement).toBe(prior)
+    } finally {
+      if (showModal) Object.defineProperty(HTMLDialogElement.prototype, 'showModal', showModal)
+      else Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal')
+      if (close) Object.defineProperty(HTMLDialogElement.prototype, 'close', close)
+      else Reflect.deleteProperty(HTMLDialogElement.prototype, 'close')
+    }
+  })
+
   it('renders message + title as text (never HTML) and resolves on OK', async () => {
     const done = spatialAlert('<b>saved</b>', { title: 'Status <i>!</i>' })
     const dialog = document.querySelector('dialog.spatial-dialog')!
     expect(dialog.querySelector('.spatial-dialog-message')!.innerHTML).not.toContain('<b>')
     expect(dialog.querySelector('.spatial-dialog-title')!.textContent).toBe('Status <i>!</i>')
     expect(dialog.querySelector<HTMLButtonElement>('button')!.textContent).toBe('OK')
+
+    const labelledBy = dialog.getAttribute('aria-labelledby')
+    const describedBy = dialog.getAttribute('aria-describedby')
+    expect(labelledBy).toBeTruthy()
+    expect(describedBy).toBeTruthy()
+    expect(document.getElementById(labelledBy!)?.textContent).toBe('Status <i>!</i>')
+    expect(document.getElementById(describedBy!)?.textContent).toBe('<b>saved</b>')
 
     // Fallback trap + focus
     expect(dialog.getAttribute('data-spatial-container')).toBe('contain')
@@ -33,6 +72,28 @@ describe('spatialAlert', () => {
 })
 
 describe('spatialConfirm', () => {
+  it('focuses OK by default and Cancel when asked', async () => {
+    // Destructive confirms should not open with the destructive choice under
+    // the cursor — a held activate press would carry straight into it.
+    const p1 = spatialConfirm('Sure?')
+    await tick()
+    expect(document.activeElement?.textContent).toBe('OK')
+    document.querySelector<HTMLButtonElement>('dialog button')!.click()
+    await expect(p1).resolves.toBe(false)
+
+    const p2 = spatialConfirm('Stop this stream?', {
+      okLabel: 'Stop',
+      defaultButton: 'cancel',
+    })
+    await tick()
+    expect(document.activeElement?.textContent).toBe('Cancel')
+    const stop = [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(
+      (b) => b.textContent === 'Stop',
+    )!
+    stop.click()
+    await expect(p2).resolves.toBe(true)
+  })
+
   it('resolves true on OK, false on cancel', async () => {
     const p1 = spatialConfirm('Sure?')
     const buttons = [...document.querySelectorAll<HTMLButtonElement>('dialog button')]

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lit — spatial-nav-css</title>
+<style>
+  sn-rail .ex-row { margin-top: 12px; }
+  .shadow-corner { opacity: 0.55; }
+  .shadow-corner .hint { margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="ex-head">
+  <a class="back" href="/">← all examples</a>
+  <h1><span class="lib">🔥 Lit</span></h1>
+  <p>Light-DOM rendering so the engine can see into components. Each
+     <code>&lt;sn-rail&gt;</code> is a LitElement whose <code>createRenderRoot() { return this }</code>
+     keeps its buttons in the document tree — candidate queries do not pierce shadow roots,
+     which is why the shadow-DOM component below is unreachable. Drive with <kbd>←↑↓→</kbd>.</p>
+</div>
+
+<div id="app">
+  <div class="ex-body">
+    <div class="ex-panel">
+      <sn-rail id="row-a" heading="Continue watching" items='["Interstellar","Dune","Arrival"]'></sn-rail>
+    </div>
+    <div class="ex-panel">
+      <sn-rail id="row-b" heading="New releases" items='["Sunrise","Nebula","Tides","Echoes"]'></sn-rail>
+    </div>
+    <div class="ex-panel shadow-corner">
+      <h2>What does NOT work — shadow DOM</h2>
+      <p class="hint">This component keeps Lit's default shadow root. Its button renders and
+         clicks fine, but the engine's candidate query cannot pierce the shadow boundary,
+         so arrows never land here.</p>
+      <sn-shadow-vault label="Unreachable by arrows"></sn-shadow-vault>
+    </div>
+    <sn-status></sn-status>
+  </div>
+</div>
+
+<script type="module" src="/src/lit/main.ts"></script>
+</body>
+</html>

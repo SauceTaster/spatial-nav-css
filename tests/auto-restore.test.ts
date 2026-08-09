@@ -5,8 +5,8 @@ import { rectProvider, type LayoutMap } from './helpers'
 /**
  * autoRestoreFocus: when the focused element is removed, focus returns to
  * the nearest surviving container (memory → default focus → first
- * focusable) after a short debounce — the Norigin-proven TV rule that the
- * focus ring never just vanishes. Requires start() (MutationObserver).
+ * focusable) after a short debounce so the focus ring does not simply vanish.
+ * Requires start() (MutationObserver).
  */
 let engine: SpatialEngine | null = null
 
@@ -45,6 +45,26 @@ describe('autoRestoreFocus', () => {
     expect(document.activeElement?.id).toBe('r1')
   })
 
+  it('restores when the focused control disables itself', async () => {
+    // "The button you pressed disables itself while it works" is everywhere
+    // in admin UIs. A disabled element stops being an eligible target, so
+    // without this the highlight silently died and the next press restarted
+    // from the first focusable.
+    const e = makeStarted(
+      `<div data-spatial-container="remember">
+         <button id="scan"></button><button id="other"></button>
+       </div>`,
+      { scan: [0, 0, 80, 80], other: [100, 0, 80, 80] },
+    )
+    e.focus(document.getElementById('scan')!)
+    expect(e.getFocused()?.id).toBe('scan')
+
+    document.getElementById('scan')!.setAttribute('disabled', '')
+    await settle()
+    expect(e.getFocused()?.id).toBe('other')
+    expect(document.activeElement?.id).toBe('other')
+  })
+
   it('prefers the container’s declared default focus when restoring', async () => {
     const e = makeStarted(
       `<div data-spatial-container>
@@ -71,6 +91,27 @@ describe('autoRestoreFocus', () => {
     e.focus(document.getElementById('outside')!) // app re-focused immediately
     await settle()
     expect(e.getFocused()?.id).toBe('outside')
+  })
+
+  it('does not steal focus that moved outside a scoped engine root', async () => {
+    document.body.innerHTML = `
+      <div id="region"><button id="a"></button><button id="b"></button></div>
+      <button id="outside"></button>`
+    engine = new SpatialEngine({
+      root: document.getElementById('region')!,
+      getRect: rectProvider({ a: [0, 0, 80, 80], b: [100, 0, 80, 80], outside: [300, 0, 80, 80] }),
+      visibilityFilter: () => true,
+      scrollBehavior: false,
+    })
+    engine.start()
+    engine.focus(document.getElementById('a')!)
+    document.getElementById('a')!.remove()
+    document.getElementById('outside')!.focus()
+
+    await settle()
+
+    expect(document.activeElement?.id).toBe('outside')
+    expect(engine.getFocused()).toBeNull()
   })
 
   it('walks up to an outer surviving container when the whole zone is removed', async () => {

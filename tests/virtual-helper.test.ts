@@ -55,6 +55,38 @@ afterEach(() => {
 })
 
 describe('attachVirtualEdges guards', () => {
+  it('rejects an invalid maxAttempts option', () => {
+    const { zone } = buildZone([0, 4])
+    expect(() =>
+      attachVirtualEdges(
+        { focus: () => false, getFocused: () => null },
+        {
+          zone,
+          count: () => TOTAL,
+          scrollToIndex: () => {},
+          maxAttempts: -1,
+        },
+      ),
+    ).toThrow(/maxAttempts must be a non-negative safe integer/)
+  })
+
+  it('ignores a non-integer custom step result', async () => {
+    const { zone } = buildZone([0, 4])
+    const n = startNav()
+    const scrollToIndex = vi.fn()
+    detach = attachVirtualEdges(n, {
+      zone,
+      count: () => TOTAL,
+      scrollToIndex,
+      step: () => Number.NaN,
+    })
+
+    n.focus('#it-4')
+    n.navigate('down')
+    await sleep(10)
+    expect(scrollToIndex).not.toHaveBeenCalled()
+  })
+
   it('does not scroll past the collection end', async () => {
     const { zone, mount } = buildZone([TOTAL - 3, TOTAL - 1])
     const n = startNav()
@@ -111,6 +143,36 @@ describe('attachVirtualEdges guards', () => {
     n.navigate('down') // 11 + 4 = 15, beyond the mounted window
     await sleep(15)
     expect(n.getFocused()?.id).toBe('it-15')
+  })
+
+  it('tells step whether the press was a held repeat, so it can accelerate', async () => {
+    // A list long enough to virtualize is long enough that holding a
+    // direction should cover ground faster than one item per press.
+    const { zone, mount } = buildZone([0, 11])
+    const n = startNav()
+    const seen: boolean[] = []
+    detach = attachVirtualEdges(n, {
+      zone,
+      count: () => TOTAL,
+      scrollToIndex: (i) => mount(Math.max(0, i - 6), Math.min(TOTAL - 1, i + 6)),
+      step: (i, dir, repeat) => {
+        seen.push(repeat)
+        return dir === 'down' ? i + (repeat ? 10 : 1) : null
+      },
+    })
+
+    n.focus('#it-11')
+    n.navigate('down') // discrete
+    await sleep(15)
+    expect(seen).toEqual([false])
+    expect(n.getFocused()?.id).toBe('it-12')
+
+    // After that advance the window is [6, 18], so 18 is the new edge.
+    n.focus('#it-18')
+    n.navigate('down', true) // held
+    await sleep(15)
+    expect(seen).toEqual([false, true])
+    expect(n.getFocused()?.id).toBe('it-28')
   })
 
   it('gives up after maxAttempts when the item never mounts', async () => {
@@ -203,5 +265,35 @@ describe('attachVirtualEdges guards', () => {
     n.navigate('down')
     await sleep(10)
     expect(scrollToIndex).not.toHaveBeenCalled()
+  })
+
+  it('cleanup cancels an advance that is already waiting to settle', async () => {
+    const { zone } = buildZone([0, 4])
+    const n = startNav()
+    const gate: { release?: () => void } = {}
+    const cleanup = attachVirtualEdges(n, {
+      zone,
+      count: () => TOTAL,
+      scrollToIndex: () => {},
+      settle: () =>
+        new Promise<void>((resolve) => {
+          gate.release = () => {
+            const el = document.createElement('div')
+            el.dataset.index = '5'
+            el.id = 'it-5'
+            el.setAttribute('data-focusable', '')
+            zone.appendChild(el)
+            resolve()
+          }
+        }),
+    })
+    n.focus('#it-4')
+    n.navigate('down')
+
+    cleanup()
+    gate.release?.()
+    await sleep(10)
+
+    expect(n.getFocused()?.id).toBe('it-4')
   })
 })

@@ -3,12 +3,11 @@
  *
  * React Flow positions nodes with CSS transforms on a pan/zoom canvas. The
  * spatial engine reads getBoundingClientRect — which is post-transform — so
- * directional nav across the graph "just works" at any zoom/pan, exactly like
- * the VR-panels demo.
+ * directional navigation can use those on-screen rectangles at any zoom/pan.
  *
  * Two integration notes (gotchas):
  *  - Disable React Flow's own node focus (nodesFocusable={false}) and mark a
- *    custom node data-focusable instead — otherwise each node is TWO stops
+ *    one native control inside each node instead — otherwise each node is TWO stops
  *    (RF's focusable wrapper + your content).
  *  - The custom node's box is the stop; its rect tracks the transformed wrapper.
  */
@@ -17,9 +16,9 @@ import '@xyflow/react/dist/style.css'
 
 function SpatialNode({ id, data }: NodeProps) {
   return (
-    <div className="flow-node" id={`node-${id}`} data-focusable>
+    <button type="button" className="flow-node" id={`node-${id}`}>
       {(data as { label: string }).label}
-    </div>
+    </button>
   )
 }
 
@@ -48,9 +47,9 @@ export function ReactFlowExample() {
       <section className="ex-panel" data-spatial-container="remember">
         <h2>Node graph — spatial nav across transformed nodes</h2>
         <p className="hint">
-          Each node is one <code>data-focusable</code> stop; React Flow's own node focus is off to
-          avoid double stops. The engine reads post-transform geometry, so <kbd>←↑↓→</kbd> moves by
-          on-screen position.
+          Each node contains one native <code>&lt;button&gt;</code> stop; React Flow's own node focus is
+          off to avoid double stops. The engine reads post-transform geometry, so <kbd>←↑↓→</kbd>
+          moves by on-screen position.
         </p>
         <div className="flow-canvas">
           <ReactFlow

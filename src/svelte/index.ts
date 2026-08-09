@@ -7,18 +7,25 @@
  *
  *   <script>
  *     import { createSpatialNav, focusable, spatialContainer } from 'spatial-nav-css/svelte'
- *     import { onDestroy } from 'svelte'
- *     const { nav, focused, destroy } = createSpatialNav({ autofocus: true })
+ *     import { onDestroy, onMount } from 'svelte'
+ *     const { nav, focused, destroy } = createSpatialNav()
+ *     onMount(() => nav.focusFirst())
  *     onDestroy(destroy)
  *   </script>
  *
  *   <section use:spatialContainer={'wrap remember'}>
- *     <div use:focusable={{ onActivate: open }} class:active={$focused === el}>…</div>
+ *     <button use:focusable on:click={open}>Open</button>
  *   </section>
+ *   <p>Focused: {$focused?.textContent ?? 'nothing'}</p>
  */
 import { createSpatialNavigation, type SpatialNavigation, type SpatialNavigationOptions } from '../index'
 import type { SpatialEvent } from '../events'
 import { ownerDocumentOf } from '../core/dom'
+import {
+  applyFocusableAttributes,
+  releaseOwnedAttributes,
+  type OwnedAttributes,
+} from '../core/attributes'
 
 /** Minimal svelte/store Readable contract — structurally compatible. */
 export interface Readable<T> {
@@ -46,22 +53,10 @@ export function focusable(
   params: FocusableParams = {},
 ): ActionReturn<FocusableParams> {
   let current = params
-  node.setAttribute('data-focusable', '')
-
-  const applyParams = () => {
-    if (current.autofocus) node.setAttribute('data-spatial-autofocus', '')
-    else node.removeAttribute('data-spatial-autofocus')
-    const dirs = {
-      up: current.navUp,
-      down: current.navDown,
-      left: current.navLeft,
-      right: current.navRight,
-    }
-    for (const [dir, value] of Object.entries(dirs)) {
-      if (typeof value === 'string') node.setAttribute(`data-nav-${dir}`, value)
-      else node.removeAttribute(`data-nav-${dir}`)
-    }
-  }
+  // Only attributes this action writes are ever removed again — the same
+  // data-* names are also how markup declares navigation directly.
+  const owned: OwnedAttributes = new Map()
+  const applyParams = () => applyFocusableAttributes(node, current, owned)
   applyParams()
 
   const onSpatialFocus = (e: Event) => current.onFocus?.(e as SpatialEvent)
@@ -77,6 +72,7 @@ export function focusable(
     destroy() {
       node.removeEventListener('spatial:focus', onSpatialFocus)
       node.removeEventListener('spatial:activate', onActivate)
+      releaseOwnedAttributes(node, owned)
     },
   }
 }
@@ -93,17 +89,37 @@ export function spatialContainer(node: HTMLElement, tokens: string = ''): Action
 
 /** Readable store of the currently focused element (or null). */
 export function focusedStore(nav: SpatialNavigation): Readable<HTMLElement | null> {
-  const root = nav.engine.root
-  const doc = ownerDocumentOf(root instanceof Document ? root : root)
+  let doc: Document | null = null
+  let root: Document | HTMLElement | null = null
+  try {
+    root = nav.engine.root
+    doc = ownerDocumentOf(root)
+  } catch {
+    // The SSR facade deliberately has no engine. A static null store keeps
+    // server rendering deterministic; the client creates a separate store.
+  }
   return {
     subscribe(run) {
-      run(nav.getFocused())
-      const onChange = () => run(nav.getFocused())
+      let last = nav.getFocused()
+      run(last)
+      if (!doc) return () => {}
+      const onChange = () => {
+        const next = nav.getFocused()
+        if (next === last) return
+        last = next
+        run(next)
+      }
       doc.addEventListener('spatial:focus', onChange)
+      doc.addEventListener('focusin', onChange)
       doc.addEventListener('focusout', onChange)
+      const Observer = doc.defaultView?.MutationObserver
+      const observer = root && Observer ? new Observer(onChange) : null
+      if (observer && root) observer.observe(root, { childList: true, subtree: true })
       return () => {
         doc.removeEventListener('spatial:focus', onChange)
+        doc.removeEventListener('focusin', onChange)
         doc.removeEventListener('focusout', onChange)
+        observer?.disconnect()
       }
     },
   }

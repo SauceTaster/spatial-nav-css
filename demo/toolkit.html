@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Production toolkit — spatial-nav-css</title>
+<title>Advanced toolkit — spatial-nav-css</title>
 <link rel="stylesheet" href="../css/spatial.css">
 <style>
   :root {
@@ -71,11 +71,11 @@
 <body>
 
 <header>
-  <h1><span>production toolkit</span> — the parts you reach for when it ships</h1>
+  <h1><span>advanced toolkit</span> — optional helpers and edge cases</h1>
   <p class="sub">
-    Each panel is one subpath import doing one production job. Everything here is
-    fully keyboard- <em>and</em> gamepad-drivable: <kbd>←↑↓→</kbd> move,
-    <kbd>Enter</kbd>/Ⓐ activate (hold for long-press), <kbd>Esc</kbd>/Ⓑ hub.
+    Each panel isolates one library behavior. With matching keyboard or
+    browser-exposed gamepad input, <kbd>←↑↓→</kbd> move, <kbd>Enter</kbd>/Ⓐ
+    activate (hold for long-press), and <kbd>Esc</kbd>/Ⓑ return to the hub.
   </p>
 </header>
 
@@ -84,10 +84,10 @@
   <section>
     <h2>🗨 Gamepad-navigable dialogs</h2>
     <code>import { spatialAlert, spatialConfirm } from 'spatial-nav-css/dialogs'</code>
-    <p>window.alert() freezes all page JS — gamepad polling included — and a
-       controller can't dismiss it. These render a real
-       &lt;dialog&gt;.showModal() instead: navigation is auto-contained,
-       every adapter works, and the promise resolves on dismissal.</p>
+    <p>window.alert() freezes all page JS — gamepad polling included — and has
+       no portable application-controlled gamepad dismissal path. These render a real
+       &lt;dialog&gt;.showModal() instead: the running document-rooted navigation
+       instance can drive it, and the promise resolves on dismissal.</p>
     <div class="row" data-spatial-container>
       <button id="btn-alert" data-spatial-autofocus>await spatialAlert(…)</button>
       <button id="btn-confirm" class="primary">await spatialConfirm(…)</button>
@@ -102,9 +102,9 @@
     <p>Activate fires once per physical press (a held Enter doesn't machine-gun
        clicks); release carries the hold duration. Try tapping vs. holding
        <kbd>Enter</kbd>/Ⓐ on the card.</p>
-    <div class="hold-card spatial-pop" data-focusable id="hold-card">
+    <button class="hold-card spatial-pop" id="hold-card">
       Tap = play &nbsp;·&nbsp; hold ≥ 600 ms = options
-    </div>
+    </button>
     <div class="meter"><i id="meter-fill"></i></div>
     <div class="out" id="hold-out"></div>
   </section>
@@ -123,7 +123,7 @@
   <section>
     <h2>🐢 Held-key throttle (TV platforms)</h2>
     <code>nav.addAdapter(keyboardAdapter({ throttleMs: 150 }))</code>
-    <p>TV remotes auto-repeat brutally fast. throttleMs gates held-key repeats
+    <p>Some TV remotes emit held-key repeats very quickly. throttleMs gates repeats
        by time (a fresh press is always instant). Toggle, then <em>hold</em>
        <kbd>↓</kbd> through the list and feel the difference.</p>
     <div class="row"><button id="throttle-toggle" aria-pressed="false">Throttle: off</button></div>
@@ -137,18 +137,18 @@
     <h2>🔬 Debug overlay</h2>
     <code>import { attachDebugOverlay } from 'spatial-nav-css/debug'
 const overlay = attachDebugOverlay(nav)  // overlay.detach()</code>
-    <p>See the page the way the engine does: cyan = focusables (indexed),
-       dashed orange = containers (with their tokens), red = current focus.
-       Repaints on focus, scroll, and resize. Dev-only by design.</p>
+    <p>See an approximate DOM view of the engine inputs: cyan = focusables
+       (indexed), dashed orange = container boxes (with their tokens), red =
+       current focus. Repaints on focus, scroll, and resize. Dev-only by design.</p>
     <div class="row">
-      <button id="debug-toggle" aria-pressed="false">Show the engine's view</button>
+      <button id="debug-toggle" aria-pressed="false">Show approximate debug view</button>
     </div>
   </section>
 
   <section>
     <h2>🧭 Where to next</h2>
-    <p style="opacity:0.8">Every page in this gallery is one self-contained
-       HTML file — <em>View Source is the tutorial.</em></p>
+    <p style="opacity:0.8">Every page keeps its app code in one HTML file —
+       <em>View Source is the tutorial.</em></p>
     <p>The <a href="quickstart.html" style="color:#c084fc">quick start</a> covers
        the core in three steps. The
        <a href="media-center.html" style="color:#c084fc">media center</a> uses
@@ -193,9 +193,18 @@ const overlay = attachDebugOverlay(nav)  // overlay.detach()</code>
   const HOLD_MS = 600
   const fill = document.getElementById('meter-fill')
   const holdOut = document.getElementById('hold-out')
+  const holdCard = document.getElementById('hold-card')
   let raf = 0
+  const resetMeter = () => {
+    cancelAnimationFrame(raf)
+    fill.style.width = '0'
+  }
+  holdCard.addEventListener('click', () => {
+    holdOut.textContent = 'pointer/native click → playing'
+  })
   document.addEventListener('spatial:activate', (e) => {
     if (e.target.id !== 'hold-card') return
+    e.preventDefault() // decide tap vs hold on release; suppress the immediate click
     const start = performance.now()
     const tick = () => {
       fill.style.width = `${Math.min(1, (performance.now() - start) / HOLD_MS) * 100}%`
@@ -205,11 +214,15 @@ const overlay = attachDebugOverlay(nav)  // overlay.detach()</code>
   })
   document.addEventListener('spatial:activaterelease', (e) => {
     if (e.target.id !== 'hold-card') return
-    cancelAnimationFrame(raf)
-    fill.style.width = '0'
+    resetMeter()
     const ms = Math.round(e.detail.durationMs)
     holdOut.textContent =
       ms >= HOLD_MS ? `long press (${ms} ms) → options menu` : `tap (${ms} ms) → playing`
+  })
+  document.addEventListener('spatial:activatecancel', (e) => {
+    if (e.target.id !== 'hold-card') return
+    resetMeter()
+    holdOut.textContent = 'press cancelled (input source lost)'
   })
 
   // --- auto-restore --------------------------------------------------------

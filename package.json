@@ -1,12 +1,20 @@
 {
   "name": "spatial-nav-css",
   "version": "0.2.0",
-  "description": "Spatial (directional) navigation with CSS-driven configuration and pluggable gamepad/keyboard/remote input — in the spirit of Valve's Panorama UI and the discontinued W3C CSS Spatial Navigation spec.",
+  "description": "Spatial (directional) navigation with CSS-driven configuration and pluggable keyboard, gamepad, and remote input, inspired by the W3C CSS Spatial Navigation draft.",
   "license": "MIT",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=22"
+    }
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "unpkg": "./dist/spatial-nav.global.js",
+  "jsdelivr": "./dist/spatial-nav.global.js",
   "exports": {
     ".": {
       "import": {
@@ -99,7 +107,8 @@
       }
     },
     "./css": "./css/spatial.css",
-    "./spatial.css": "./css/spatial.css"
+    "./spatial.css": "./css/spatial.css",
+    "./package.json": "./package.json"
   },
   "typesVersions": {
     "*": {
@@ -133,9 +142,14 @@
     "dist",
     "css",
     "docs",
-    "README.md"
+    "llms.txt",
+    "llms-full.txt",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./css/spatial.css"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SauceTaster/spatial-nav-css.git"
@@ -144,9 +158,11 @@
   "bugs": {
     "url": "https://github.com/SauceTaster/spatial-nav-css/issues"
   },
-  "engines": {
-    "node": ">=20"
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
+  "packageManager": "npm@11.16.0",
   "keywords": [
     "spatial-navigation",
     "css",
@@ -165,8 +181,9 @@
     "web-components"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "clean:dist": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean:dist && tsup",
+    "dev": "npm run clean:dist && tsup --watch",
     "typecheck": "tsc --noEmit",
     "lint": "biome ci .",
     "lint:fix": "biome check --write .",
@@ -174,12 +191,24 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:browser": "npm run build && playwright test --project=chromium",
+    "test:browser:all": "npm run build && playwright test",
     "bench": "vitest bench --run",
     "check:package": "publint && attw --pack . --exclude-entrypoints ./css ./spatial.css",
-    "ci": "npm run lint && npm run typecheck && npm run build && npm run check:package && npm run test:coverage",
+    "check:react17": "npm run build && node scripts/check-react17.mjs",
+    "check:ssr": "node scripts/check-ssr.mjs",
+    "ci:examples": "npm ci --prefix examples && npm run typecheck --prefix examples && npm test --prefix examples && npm run build --prefix examples",
+    "ci:handheld": "npm ci --prefix handheld-os && npm exec --prefix handheld-os -- playwright install chromium && npm run ci --prefix handheld-os",
+    "audit:runtime": "npm audit --omit=dev && npm audit --prefix examples --omit=dev",
+    "audit:all": "npm audit && npm audit --prefix examples && npm audit --prefix handheld-os && npm audit --prefix tests/compat/react17",
+    "build:llms": "node scripts/build-llms.mjs",
+    "check:llms": "node scripts/build-llms.mjs --check",
+    "ci": "npm run lint && npm run typecheck && npm run check:llms && npm run build && npm run check:ssr && npm run check:package && npm run check:react17 && npm run test:coverage",
     "demo": "npm run build && node scripts/serve.mjs",
     "changeset": "changeset",
-    "release": "npm run build && changeset publish"
+    "version:changesets": "changeset version && npm install --package-lock-only",
+    "prepack": "npm run build",
+    "release": "changeset publish"
   },
   "peerDependencies": {
     "react": ">=17",
@@ -196,21 +225,30 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.3",
     "@biomejs/biome": "^2.4.16",
+    "@playwright/test": "^1.62.1",
     "@changesets/cli": "^2.31.0",
     "@tanstack/react-virtual": "^3.14.2",
     "@testing-library/react": "^16.2.0",
     "@types/node": "^25.9.3",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@vitest/coverage-v8": "^3.2.6",
-    "jsdom": "^26.0.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "jsdom": "^29.0.1",
     "publint": "^0.3.21",
     "react": "^19.0.0",
     "react-aria-components": "^1.18.0",
     "react-dom": "^19.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0",
-    "vitest": "^3.0.0",
+    "vitest": "^4.1.10",
     "vue": "^3.5.0"
+  },
+  "overrides": {
+    "esbuild": "0.28.1"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "fsevents@2.3.3": true,
+    "fsevents@2.3.2": true
   }
 }

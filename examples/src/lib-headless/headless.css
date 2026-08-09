@@ -1,0 +1,96 @@
+/* Both libraries ship unstyled, so this is the whole visual layer.
+   Focus is styled from [data-spatial-focused], never from .spatial-focused:
+   React rewrites className on every render and would drop the class. */
+
+.hl-root { max-width: 1080px; margin: 0 auto; display: grid; gap: 16px; }
+.hl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 860px) { .hl-grid { grid-template-columns: 1fr; } }
+
+.hl-half {
+  background: var(--panel); border-radius: 12px; padding: 16px 18px 18px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: grid; gap: 14px; align-content: start;
+}
+.hl-half-head h2 { font-size: 15px; margin: 0 0 4px; color: var(--accent); }
+.hl-note { font-size: 12px; opacity: 0.6; line-height: 1.5; margin: 0; }
+.hl-note code { font: 11px ui-monospace, monospace; opacity: 0.9; }
+.hl-muted { font-size: 12px; opacity: 0.65; margin: 0; line-height: 1.5; }
+
+.hl-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.hl-btn {
+  background: var(--panel-2); border: 0; color: var(--text); font: inherit; font-size: 13px;
+  padding: 9px 14px; border-radius: 7px; cursor: pointer; text-align: left;
+}
+.hl-btn-danger { color: #ffb4a8; }
+
+/* Headless UI Switch is a real button; Ark's is a label wrapping a hidden
+   input, so the ring has to be projected from the input onto the track. */
+.hl-switch, .hl-ark-switch {
+  display: inline-flex; align-items: center; gap: 9px; cursor: pointer; user-select: none;
+  background: var(--panel-2); border: 0; color: var(--text); font: inherit; font-size: 13px;
+  padding: 7px 13px 7px 9px; border-radius: 7px;
+}
+.hl-switch-thumb, .hl-switch-track {
+  width: 30px; height: 17px; border-radius: 999px; background: #0d1620;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); position: relative; flex: none;
+}
+.hl-switch[data-checked] .hl-switch-thumb,
+.hl-switch-track[data-state="checked"] { background: var(--accent); }
+.hl-switch-thumb::after, .hl-switch-knob {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px;
+  border-radius: 50%; background: var(--text); transition: transform 120ms ease;
+}
+.hl-switch[data-checked] .hl-switch-thumb::after,
+.hl-switch-track[data-state="checked"] .hl-switch-knob { transform: translateX(13px); }
+.hl-switch-text { white-space: nowrap; }
+
+/* sr-only: the input must stay rendered, or the engine's visibility filter
+   (correctly) drops it and the Ark switch becomes unreachable. */
+.hl-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.hl-ark-switch:has([data-spatial-focused]) .hl-switch-track {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
+
+.hl-tabs { display: grid; gap: 10px; }
+.hl-tablist { display: flex; gap: 6px; }
+.hl-tab {
+  background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--text);
+  font: inherit; font-size: 13px; padding: 6px 10px; cursor: pointer; opacity: 0.65;
+}
+.hl-tab[data-selected], .hl-tab[aria-selected="true"] { opacity: 1; border-bottom-color: var(--accent); }
+.hl-panel { display: grid; gap: 10px; justify-items: start; min-height: 74px; }
+/* Ark hides the inactive panel with the `hidden` attribute; a class-based
+   `display` beats the UA rule, so it has to be restored explicitly. */
+.hl-panel[hidden] { display: none; }
+
+/* Popovers: Headless UI positions its portaled panel with floating-ui inline
+   styles, Ark positions its Positioner — both just need surface styling. */
+.hl-popover {
+  background: var(--panel-2); border-radius: 8px; padding: 5px; min-width: 180px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  display: grid; gap: 2px; z-index: 20;
+}
+.hl-option {
+  background: transparent; border: 0; color: var(--text); font: inherit; font-size: 13px;
+  padding: 8px 10px; border-radius: 6px; cursor: pointer; text-align: left; width: 100%;
+}
+.hl-option[data-focus], .hl-option[data-highlighted] { background: rgba(255, 255, 255, 0.07); }
+.hl-option[data-selected], .hl-option[data-state="checked"] { color: var(--accent); }
+
+.hl-backdrop { position: fixed; inset: 0; background: rgba(6, 10, 14, 0.72); z-index: 30; }
+.hl-modal-wrap {
+  position: fixed; inset: 0; z-index: 31; display: grid; place-items: center; padding: 24px;
+}
+.hl-dialog {
+  background: var(--panel); border-radius: 12px; padding: 20px; width: min(420px, 100%);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  display: grid; gap: 12px;
+}
+.hl-dialog-title { font-size: 15px; margin: 0; }
+.hl-dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+.hl-foot { font: 12px/1.6 ui-monospace, monospace; opacity: 0.85; min-height: 1.5em; }

@@ -1,0 +1,113 @@
+.hv-root {
+  display: grid;
+  align-content: start;
+  gap: 26px;
+  padding: 22px var(--os-pad);
+  overflow-y: auto;
+}
+.hv-heading {
+  margin: 0 0 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--os-text-faint);
+  font-weight: 600;
+}
+.hv-rail {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 6px 2px 12px;
+  scrollbar-width: none;
+}
+.hv-rail::-webkit-scrollbar {
+  display: none;
+}
+.hv-tile {
+  flex: 0 0 186px;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 0 0 12px;
+  border: 0;
+  border-radius: var(--os-r-md);
+  overflow: hidden;
+  background: var(--os-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 130ms ease, box-shadow 130ms ease;
+}
+.hv-tile-art {
+  display: block;
+  height: 104px;
+  background: linear-gradient(
+    155deg,
+    hsl(var(--hue, 210) 52% 34%),
+    hsl(var(--hue, 210) 44% 15%)
+  );
+}
+.hv-tile-title {
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.hv-tile-meta {
+  padding: 0 12px;
+  font-size: 12px;
+  color: var(--os-text-faint);
+}
+.hv-skeleton {
+  height: 168px;
+  background: linear-gradient(100deg, var(--os-surface), var(--os-surface-2), var(--os-surface));
+}
+.hv-dests {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.hv-dest {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 0;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 130ms ease, box-shadow 130ms ease;
+}
+.hv-dest-glyph {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface-3);
+  color: var(--os-accent);
+  font-size: 19px;
+}
+.hv-dest strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+.hv-dest small {
+  display: block;
+  font-size: 12px;
+  color: var(--os-text-faint);
+}
+.hv-hint {
+  margin: 0;
+}
+.hv-hint kbd {
+  background: var(--os-surface-3);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font: 11px var(--os-mono);
+}

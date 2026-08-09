@@ -11,6 +11,8 @@ import type { Direction } from './core/types'
  *                            synthetic click on the focused element
  *  - 'spatial:activaterelease' the activate control was released;
  *                            detail.durationMs enables long-press UX
+ *  - 'spatial:activatecancel' a matched activate press was abandoned because
+ *                            its input source stopped or lost ownership
  *  - 'spatial:back'          cancelable — preventDefault() marks it handled
  */
 export type SpatialEventType =
@@ -19,6 +21,7 @@ export type SpatialEventType =
   | 'spatial:nofocustarget'
   | 'spatial:activate'
   | 'spatial:activaterelease'
+  | 'spatial:activatecancel'
   | 'spatial:back'
 
 export interface SpatialEventDetail {
@@ -28,6 +31,15 @@ export interface SpatialEventDetail {
   source: string
   /** How long the activate control was held, on 'spatial:activaterelease'. */
   durationMs?: number
+  /**
+   * True when this move came from a *held* direction rather than a discrete
+   * press. Accelerated list scrolling — "hold down to speed up, then jump by
+   * section" — needs to tell the two apart, and only the adapter knows.
+   * Present on directional focus and no-target events; false for discrete
+   * moves unless a programmatic caller explicitly marks the move as repeated.
+   * Absent for non-directional events.
+   */
+  repeat?: boolean
 }
 
 export type SpatialEvent = CustomEvent<SpatialEventDetail>
@@ -39,7 +51,14 @@ export function dispatchSpatialEvent(
   detail: SpatialEventDetail,
   cancelable = false,
 ): boolean {
+  const node = target as EventTarget & { nodeType?: number; ownerDocument?: Document | null }
+  const doc = node.nodeType === 9 ? (target as Document) : node.ownerDocument
+  const EventConstructor =
+    doc?.defaultView?.CustomEvent ?? (typeof CustomEvent !== 'undefined' ? CustomEvent : null)
+  if (!EventConstructor) {
+    throw new Error('spatial-nav-css cannot dispatch DOM events without a CustomEvent implementation')
+  }
   return target.dispatchEvent(
-    new CustomEvent<SpatialEventDetail>(type, { detail, bubbles: true, composed: true, cancelable }),
+    new EventConstructor(type, { detail, bubbles: true, composed: true, cancelable }),
   )
 }

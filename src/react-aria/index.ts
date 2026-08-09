@@ -3,16 +3,13 @@
  *
  * The two systems already divide the work cleanly:
  *
- *  - RAC collections (ListBox, Menu, GridList, …) use a roving tabindex, so
- *    the spatial engine sees exactly ONE focusable per collection — the
- *    collection behaves as a single spatial stop, and entering it lands on
- *    RAC's current item.
- *  - RAC owns arrow keys along its orientation (it preventDefaults them,
- *    including at the edges); the keyboard adapter skips defaultPrevented
- *    events, so there is no double-handling. Spatial navigation takes over
- *    on the orthogonal axis and everywhere outside the collection.
- *  - Spatial focus is real DOM focus, so RAC's selection/focus state follows
- *    automatically when the engine focuses an item.
+ *  - In tested single-orientation collection patterns, RAC's roving tabindex
+ *    can make its current item the collection's spatial stop.
+ *  - When RAC consumes an arrow key with `preventDefault()`, the keyboard
+ *    adapter leaves that event alone. Applications should browser-test which
+ *    axes and edge keys their RAC components consume.
+ *  - Spatial moves use real DOM focus, so RAC receives ordinary focus events;
+ *    selection behavior still depends on the component and its configuration.
  *
  * What this module adds: prop helpers for marking RAC components as spatial
  * stops/zones (RAC components forward data-* props to the DOM), a lean
@@ -27,7 +24,8 @@
  *     <Modal {...spatialZone('contain')}> … </Modal>
  *   </SpatialNavigationProvider>
  */
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useRef, useState } from 'react'
+import type { SpatialRef } from '../react/index'
 
 export {
   SpatialNavigationProvider,
@@ -39,6 +37,8 @@ export {
 export type {
   SpatialNavigationProviderProps,
   SpatialContainerProps,
+  SpatialRef,
+  SpatialRefObject,
   UseFocusableOptions,
   UseFocusableResult,
 } from '../react/index'
@@ -55,9 +55,9 @@ export interface SpatialFocusableOptions {
 
 /**
  * DOM props to spread onto a RAC component (or any element) to make it a
- * spatial stop. For RAC collections you usually *don't* need this — the
- * roving-tabindex item is already the stop; use it for custom panels and
- * non-interactive tiles.
+ * spatial stop. In a RAC collection, its current roving-tabindex item may
+ * already be the stop. Prefer native interactive elements; custom focusable
+ * elements still need suitable roles, names, and activation behavior.
  */
 export function spatialFocusable(options: SpatialFocusableOptions = {}): Record<string, string> {
   const props: Record<string, string> = { 'data-focusable': '' }
@@ -89,7 +89,7 @@ export function spatialZone(
 }
 
 export interface UseSpatialFocusedResult<T extends HTMLElement> {
-  ref: RefObject<T | null>
+  ref: SpatialRef<T>
   /** True while the element (or a descendant) holds spatial focus. */
   focused: boolean
 }
@@ -97,28 +97,50 @@ export interface UseSpatialFocusedResult<T extends HTMLElement> {
 /**
  * Focus-state hook for styling RAC components under gamepad input.
  *
- * react-aria's focus-visible modality is keyed off real keyboard/pointer
- * events, so controller-driven focus doesn't set `data-focus-visible`. This
- * hook reports focus-within state straight from DOM focus events (which
- * spatial focus always raises), without marking the element `data-focusable`
- * — RAC items are already focusable.
+ * Focus-visible styling is modality-sensitive and may not classify
+ * controller-driven focus as an application expects. This hook reports
+ * focus-within state from ordinary DOM focus events, without changing the
+ * element's focusability.
  */
 export function useSpatialFocused<T extends HTMLElement = HTMLElement>(): UseSpatialFocusedResult<T> {
-  const ref = useRef<T | null>(null)
   const [focused, setFocused] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const onIn = () => setFocused(true)
-    const onOut = (e: FocusEvent) => {
-      if (!(e.relatedTarget instanceof Node) || !el.contains(e.relatedTarget)) setFocused(false)
+  const node = useRef<T | null>(null)
+  const detach = useRef<(() => void) | null>(null)
+  const ref = useRef<SpatialRef<T> | null>(null)
+
+  if (!ref.current) {
+    // Callback ref, so a RAC component that renders its DOM node later (or
+    // swaps it) still gets wired — a mount-time effect would have bailed on
+    // the null ref and never retried.
+    const attach = (next: T | null): void => {
+      if (node.current === next) return
+      detach.current?.()
+      detach.current = null
+      node.current = next
+      if (!next) {
+        setFocused(false)
+        return
+      }
+      const onIn = () => setFocused(true)
+      const onOut = (e: FocusEvent) => {
+        const related = e.relatedTarget as (EventTarget & { nodeType?: number }) | null
+        if (!related || typeof related.nodeType !== 'number' || !next.contains(related as Node)) {
+          setFocused(false)
+        }
+      }
+      next.addEventListener('focusin', onIn)
+      next.addEventListener('focusout', onOut)
+      detach.current = () => {
+        next.removeEventListener('focusin', onIn)
+        next.removeEventListener('focusout', onOut)
+      }
+      const active = next.ownerDocument.activeElement
+      setFocused(active !== null && next.contains(active))
     }
-    el.addEventListener('focusin', onIn)
-    el.addEventListener('focusout', onOut)
-    return () => {
-      el.removeEventListener('focusin', onIn)
-      el.removeEventListener('focusout', onOut)
-    }
-  }, [])
-  return { ref, focused }
+    ref.current = Object.defineProperty(attach, 'current', {
+      get: () => node.current,
+    }) as SpatialRef<T>
+  }
+
+  return { ref: ref.current, focused }
 }

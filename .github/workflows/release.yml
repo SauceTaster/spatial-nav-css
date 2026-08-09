@@ -1,14 +1,17 @@
-# Changesets release flow (the TanStack/ecosystem standard):
+# Changesets release flow:
 #  - Contributors add a changeset alongside their PR (`npx changeset`).
 #  - On merge to main, this workflow opens/updates a "Version Packages" PR.
 #  - Merging that PR publishes to npm with provenance attestation.
 #
-# Requires the NPM_TOKEN repository secret (npm automation token).
+# Prerequisites are documented in RELEASE_CHECKLIST.md. In particular, npm must
+# trust this exact repository and workflow filename. Publishing uses OIDC; do not
+# add a long-lived NPM_TOKEN to this workflow.
 name: Release
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,27 +21,33 @@ concurrency: release-${{ github.ref }}
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write # version PR
       pull-requests: write # version PR
-      id-token: write # npm provenance
+      id-token: write # npm trusted publishing (OIDC)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
           registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Ensure an OIDC-capable npm CLI
+        run: npm install --global 'npm@11.16.0'
       - run: npm ci
       - name: Verify before release
         run: npm run ci
       - name: Create release PR or publish
-        uses: changesets/action@v1
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
+          # version:changesets also syncs package-lock.json — a bare
+          # `changeset version` bumps only package.json and would leave
+          # permanent lockfile drift in every version PR.
+          version: npm run version:changesets
           publish: npm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'

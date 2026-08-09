@@ -2,8 +2,7 @@
  * The exclusion cheat-sheet, as data. Every way to keep an element OUT of
  * spatial navigation, each paired with whether the engine should treat it as a
  * stop. The browser page renders these with a live PASS/skip badge; the test
- * asserts the engine agrees. One source of truth → the demo can't drift from
- * the guarantee.
+ * asserts the engine agrees for this fixture.
  *
  * Two independent mechanisms are at play:
  *   selector   — the focusable selector excludes tabindex=-1, :disabled, and
@@ -39,8 +38,8 @@ export const EXCLUSION_ROWS: ExclusionRow[] = [
   },
   {
     id: 'focusable-div',
-    label: 'Plain <div> + data-focusable',
-    mechanism: 'opt-in hook',
+    label: 'Plain <div> + data-focusable (spatial-only example)',
+    mechanism: 'opt-in hook; not an accessible control by itself',
     expectStop: true,
     build: (doc) => {
       const d = doc.createElement('div')

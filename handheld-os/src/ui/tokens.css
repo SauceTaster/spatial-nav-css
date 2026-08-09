@@ -1,0 +1,103 @@
+/*
+ * Design tokens for the OS shell.
+ *
+ * Sized for a handheld at arm's length: nothing below 13px, generous hit
+ * targets, and a focus ring that reads at a glance because on a gamepad the
+ * ring *is* the cursor.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces, back to front. */
+  --os-bg: #0b0f14;
+  --os-surface: #131a22;
+  --os-surface-2: #1a232d;
+  --os-surface-3: #223040;
+  --os-overlay: rgb(6 10 14 / 0.82);
+  --os-line: rgb(255 255 255 / 0.07);
+
+  /* Text. */
+  --os-text: #e6edf3;
+  --os-text-dim: #9bb0c3;
+  --os-text-faint: #8298af;
+
+  /* Accents. */
+  --os-accent: #59b0ff;
+  --os-accent-strong: #1a9fff;
+  --os-good: #6ddf9b;
+  --os-warn: #f2c14e;
+  --os-bad: #ff6b6b;
+  --os-compat-verified: #6ddf9b;
+  --os-compat-playable: #f2c14e;
+  --os-compat-unsupported: #ff6b6b;
+
+  /* Geometry. */
+  --os-r-sm: 6px;
+  --os-r-md: 10px;
+  --os-r-lg: 16px;
+  --os-gap: 12px;
+  --os-pad: 18px;
+
+  /* Typography. */
+  --os-font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --os-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* The library's ring, tuned for a handheld. */
+  --spatial-focus-ring-color: var(--os-accent);
+  --spatial-focus-ring-width: 3px;
+  --spatial-focus-ring-offset: 3px;
+  --spatial-focus-ring-radius: var(--os-r-md);
+  --spatial-focus-ring-glow: rgb(89 176 255 / 0.42);
+  --spatial-scroll-margin: 72px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#os-root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--os-bg);
+  color: var(--os-text);
+  font-family: var(--os-font);
+  font-size: 15px;
+  line-height: 1.45;
+  overflow: hidden; /* the shell owns scrolling, not the document */
+}
+
+/*
+ * Focus styling keys off the attribute, never the class: React rewrites
+ * className on its next render and would drop the engine's class with it.
+ */
+[data-spatial-focused] {
+  outline: var(--spatial-focus-ring-width) solid var(--spatial-focus-ring-color);
+  outline-offset: var(--spatial-focus-ring-offset);
+}
+
+.os-lift[data-spatial-focused] {
+  transform: scale(1.045);
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.06);
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os-lift[data-spatial-focused] {
+    transform: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  [data-spatial-focused] {
+    outline-color: Highlight;
+  }
+}

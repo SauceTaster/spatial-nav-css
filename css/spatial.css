@@ -43,55 +43,54 @@
 
 :root {
   --spatial-focus-ring-color: #1a9fff; /* Steam-y blue */
-  --spatial-focus-ring-glow: rgba(26, 159, 255, 0.45);
   --spatial-focus-ring-width: 3px;
   --spatial-focus-ring-offset: 2px;
   --spatial-focus-ring-radius: 6px;
-  --spatial-focus-transition: 120ms ease-out;
+  --spatial-focus-ring-glow: rgba(26, 159, 255, 0.45);
   --spatial-scroll-margin: 24px;
 }
 
 /*
- * The engine toggles .spatial-focused on the current element. Gamepad- and
- * remote-driven focus is programmatic, so :focus-visible alone is not
- * reliable — the class is the source of truth, native :focus-visible is
- * kept as a fallback for plain keyboard tabbing.
+ * The engine marks the current element two ways: the .spatial-focused class
+ * (documented and themeable) and a matching [data-spatial-focused]
+ * attribute. Both are styled here on purpose — a framework that renders
+ * `className` / `:class` / `class:` rewrites the class attribute on its next
+ * render and would drop the class, but nothing renders the data attribute,
+ * so the ring survives re-renders. Gamepad- and remote-driven focus is
+ * programmatic, so :focus-visible alone is not reliable; it stays as a
+ * fallback for plain keyboard tabbing.
  */
 .spatial-focused,
+[data-spatial-focused],
 [data-focusable]:focus-visible {
   outline: var(--spatial-focus-ring-width) solid var(--spatial-focus-ring-color);
   outline-offset: var(--spatial-focus-ring-offset);
-  border-radius: var(--spatial-focus-ring-radius);
-  box-shadow:
-    0 0 0 var(--spatial-focus-ring-offset) transparent,
-    0 0 18px var(--spatial-focus-ring-glow);
-  transition:
-    outline-color var(--spatial-focus-transition),
-    box-shadow var(--spatial-focus-transition),
-    transform var(--spatial-focus-transition);
-  z-index: 1;
 }
 
 /* Don't double up rings on elements the engine is already decorating. */
 .spatial-focused:focus,
-.spatial-focused:focus-visible {
+.spatial-focused:focus-visible,
+[data-spatial-focused]:focus,
+[data-spatial-focused]:focus-visible {
   outline: var(--spatial-focus-ring-width) solid var(--spatial-focus-ring-color);
 }
 
-/* Opt-in focusables (cards, tiles) shouldn't show a text cursor. */
-[data-focusable] {
-  cursor: pointer;
-  user-select: none;
+/* Optional glow; separate so the base sheet does not replace app box-shadows. */
+.spatial-glow.spatial-focused,
+.spatial-glow[data-spatial-focused] {
+  box-shadow: 0 0 18px var(--spatial-focus-ring-glow);
 }
 
 /* Keep focused elements clear of scroll-container edges. */
 .spatial-focused,
+[data-spatial-focused],
 [data-focusable] {
   scroll-margin: var(--spatial-scroll-margin);
 }
 
 /* Subtle Panorama-style "pop" on focus. Opt in with .spatial-pop. */
-.spatial-pop.spatial-focused {
+.spatial-pop.spatial-focused,
+.spatial-pop[data-spatial-focused] {
   transform: scale(1.04);
 }
 
@@ -126,11 +125,20 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spatial-focused,
-  [data-focusable]:focus-visible {
-    transition: none;
-  }
-  .spatial-pop.spatial-focused {
+  .spatial-pop.spatial-focused,
+  .spatial-pop[data-spatial-focused] {
     transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .spatial-focused,
+  [data-spatial-focused],
+  [data-focusable]:focus-visible {
+    outline-color: Highlight;
+  }
+  .spatial-glow.spatial-focused,
+  .spatial-glow[data-spatial-focused] {
+    box-shadow: none;
   }
 }

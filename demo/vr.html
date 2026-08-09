@@ -48,6 +48,7 @@
     height: 86px; border-radius: 14px; display: grid; place-content: center; gap: 6px;
     text-align: center; font-size: 11px;
     background: rgba(125, 243, 255, 0.07);
+    border: 0; color: inherit;
   }
   .app span { font-size: 26px; }
 
@@ -55,6 +56,7 @@
     display: flex; justify-content: space-between; align-items: center; gap: 18px;
     width: 190px; padding: 10px 12px; border-radius: 12px; font-size: 13px;
     background: rgba(125, 243, 255, 0.06);
+    border: 0; color: inherit; text-align: left;
   }
   .pill {
     width: 36px; height: 20px; border-radius: 10px; background: #2a4456; position: relative;
@@ -85,29 +87,29 @@
 <div class="scene">
   <section class="panel left" data-spatial-container="remember">
     <h2>QUICK SETTINGS</h2>
-    <div class="toggle-row spatial-pop" data-focusable role="button" aria-pressed="true">Wi-Fi <i class="pill"></i></div>
-    <div class="toggle-row spatial-pop" data-focusable role="button" aria-pressed="false">Do Not Disturb <i class="pill"></i></div>
-    <div class="toggle-row spatial-pop" data-focusable role="button" aria-pressed="true">Boundary Grid <i class="pill"></i></div>
-    <div class="toggle-row spatial-pop" data-focusable role="button" aria-pressed="false">Passthrough <i class="pill"></i></div>
+    <button class="toggle-row spatial-pop" aria-pressed="true">Wi-Fi <i class="pill"></i></button>
+    <button class="toggle-row spatial-pop" aria-pressed="false">Do Not Disturb <i class="pill"></i></button>
+    <button class="toggle-row spatial-pop" aria-pressed="true">Boundary Grid <i class="pill"></i></button>
+    <button class="toggle-row spatial-pop" aria-pressed="false">Passthrough <i class="pill"></i></button>
   </section>
 
   <section class="panel apps" data-spatial-container="remember" style="grid-template-columns: repeat(3, 86px)">
     <h2 style="grid-column: 1/-1">LIBRARY</h2>
-    <div class="app spatial-pop" data-focusable data-spatial-autofocus><span>🚀</span>Orbit Lab</div>
-    <div class="app spatial-pop" data-focusable><span>🎨</span>Sculpt</div>
-    <div class="app spatial-pop" data-focusable><span>🏔️</span>Summit</div>
-    <div class="app spatial-pop" data-focusable><span>🎬</span>Cinema</div>
-    <div class="app spatial-pop" data-focusable><span>♟️</span>Deep Board</div>
-    <div class="app spatial-pop" data-focusable><span>🛰️</span>EVA Sim</div>
+    <button class="app spatial-pop" data-spatial-autofocus><span>🚀</span>Orbit Lab</button>
+    <button class="app spatial-pop"><span>🎨</span>Sculpt</button>
+    <button class="app spatial-pop"><span>🏔️</span>Summit</button>
+    <button class="app spatial-pop"><span>🎬</span>Cinema</button>
+    <button class="app spatial-pop"><span>♟️</span>Deep Board</button>
+    <button class="app spatial-pop"><span>🛰️</span>EVA Sim</button>
   </section>
 
   <section class="panel right media" data-spatial-container="remember">
     <h2>NOW PLAYING</h2>
     <div class="now">Solar Winds<br><small style="opacity:.6">Phase Array — 3:42</small></div>
     <div class="controls" data-spatial-container>
-      <button>⏮</button>
-      <button id="play">⏸</button>
-      <button>⏭</button>
+      <button aria-label="Previous track">⏮</button>
+      <button id="play" aria-label="Pause">⏸</button>
+      <button aria-label="Next track">⏭</button>
     </div>
   </section>
 </div>
@@ -124,14 +126,17 @@
   nav.start()
 
   const hud = document.getElementById('hud-msg')
-  document.addEventListener('spatial:activate', (e) => {
-    const t = e.target
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('button')
+    if (!t) return
     if (t.matches('.toggle-row')) {
       t.setAttribute('aria-pressed', t.getAttribute('aria-pressed') !== 'true')
     } else if (t.matches('.app')) {
       hud.textContent = ` · launching ${t.textContent.trim()}…`
     } else if (t.id === 'play') {
-      t.textContent = t.textContent === '⏸' ? '▶' : '⏸'
+      const wasPlaying = t.textContent === '⏸'
+      t.textContent = wasPlaying ? '▶' : '⏸'
+      t.setAttribute('aria-label', wasPlaying ? 'Play' : 'Pause')
     }
   })
   document.addEventListener('spatial:back', (e) => {

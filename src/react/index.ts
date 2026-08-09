@@ -9,8 +9,8 @@
  *   </SpatialNavigationProvider>
  *
  *   function Card() {
- *     const { ref, focused } = useFocusable<HTMLDivElement>({ onActivate: open })
- *     return <div ref={ref} className={focused ? 'card focused' : 'card'} />
+ *     const { ref, focused } = useFocusable<HTMLButtonElement>()
+ *     return <button ref={ref} onClick={open} className={focused ? 'card focused' : 'card'}>Open</button>
  *   }
  */
 import {
@@ -20,10 +20,15 @@ import {
   useEffect,
   useRef,
   useState,
+  type ReactElement,
   type ReactNode,
-  type RefObject,
 } from 'react'
 import { createSpatialNavigation, type SpatialNavigation, type SpatialNavigationOptions } from '../index'
+import {
+  applyFocusableAttributes,
+  releaseOwnedAttributes,
+  type OwnedAttributes,
+} from '../core/attributes'
 import type { SpatialEvent, SpatialEventType } from '../events'
 
 const SpatialContext = createContext<SpatialNavigation | null>(null)
@@ -33,23 +38,23 @@ export interface SpatialNavigationProviderProps extends SpatialNavigationOptions
 }
 
 /**
- * Creates a SpatialNavigation instance, starts it on mount, destroys it on
+ * Creates a SpatialNavigation instance, starts it on mount, stops it on
  * unmount, and provides it via context. Options are captured on first render.
  */
-export function SpatialNavigationProvider(props: SpatialNavigationProviderProps): ReactNode {
+export function SpatialNavigationProvider(props: SpatialNavigationProviderProps): ReactElement {
   const { children, ...options } = props
   const [nav] = useState(() => createSpatialNavigation(options))
   useEffect(() => {
     nav.start()
-    // Clean up with stop(), not destroy(): the nav instance is created once
-    // (useState) and reused across React's mount/unmount/remount cycles —
-    // notably StrictMode's intentional double-invoke in dev. destroy() clears
-    // the input adapters permanently, so the remount's start() would have none
-    // and keyboard/gamepad input would silently stop working. stop() removes
-    // every global listener (focusin, mutation observer, adapter listeners)
-    // but keeps the adapters, so a remount fully re-arms. On a genuine unmount
-    // the whole tree is gone, so there is nothing left to leak.
-    return () => nav.stop()
+    // The nav instance is reused when React replays effects (notably
+    // StrictMode). Stop the composed input manager so its adapters remain
+    // registered, then reset only the engine's DOM state. A remount can start
+    // cleanly, while a genuine unmount does not leave focus classes or
+    // engine-added tabindex attributes on elements outside the React tree.
+    return () => {
+      nav.stop()
+      nav.engine.destroy()
+    }
   }, [nav])
   return createElement(SpatialContext.Provider, { value: nav }, children)
 }
@@ -74,9 +79,27 @@ export interface UseFocusableOptions {
 }
 
 export interface UseFocusableResult<T extends HTMLElement> {
-  ref: RefObject<T | null>
+  ref: SpatialRef<T>
   /** True while this element is the spatially focused element. */
   focused: boolean
+}
+
+/**
+ * Object-ref shape shared by React 17–19. React 19 moved nullability into the
+ * `RefObject` generic, while earlier versions kept it on `.current`.
+ */
+export interface SpatialRefObject<T extends HTMLElement> {
+  readonly current: T | null
+}
+
+/**
+ * A callback ref that also exposes `.current`. React invokes it on every
+ * attach and detach, which is what lets a conditionally rendered element or
+ * a swapped target wire itself up; `.current` keeps the plain object-ref
+ * reads that earlier versions of this hook returned working.
+ */
+export interface SpatialRef<T extends HTMLElement> extends SpatialRefObject<T> {
+  (node: T | null): void
 }
 
 /**
@@ -86,38 +109,61 @@ export interface UseFocusableResult<T extends HTMLElement> {
 export function useFocusable<T extends HTMLElement = HTMLElement>(
   options: UseFocusableOptions = {},
 ): UseFocusableResult<T> {
-  const ref = useRef<T | null>(null)
   const [focused, setFocused] = useState(false)
   const latest = useRef(options)
   latest.current = options
+  const node = useRef<T | null>(null)
+  const owned = useRef<OwnedAttributes>(new Map())
+  const detach = useRef<(() => void) | null>(null)
+  const ref = useRef<SpatialRef<T> | null>(null)
 
+  if (!ref.current) {
+    // A callback ref rather than effects over a static object ref: effects
+    // run once and bail when `.current` is still null, so an element that
+    // mounts later — or a ref pointed at a different node — was silently
+    // never wired. React calls this on every attach and detach instead.
+    const attach = (next: T | null): void => {
+      if (node.current === next) return
+      detach.current?.()
+      detach.current = null
+      node.current = next
+      if (!next) {
+        setFocused(false)
+        return
+      }
+      applyFocusableAttributes(next, latest.current, owned.current)
+      const onFocus = () => setFocused(true)
+      const onBlur = () => setFocused(false)
+      const onSpatialFocus = (e: Event) => latest.current.onFocus?.(e as SpatialEvent)
+      const onActivate = (e: Event) => latest.current.onActivate?.(e as SpatialEvent)
+      next.addEventListener('focus', onFocus)
+      next.addEventListener('blur', onBlur)
+      next.addEventListener('spatial:focus', onSpatialFocus)
+      next.addEventListener('spatial:activate', onActivate)
+      detach.current = () => {
+        next.removeEventListener('focus', onFocus)
+        next.removeEventListener('blur', onBlur)
+        next.removeEventListener('spatial:focus', onSpatialFocus)
+        next.removeEventListener('spatial:activate', onActivate)
+        releaseOwnedAttributes(next, owned.current)
+      }
+      // The node can arrive already focused (late mount, swapped target).
+      setFocused(next.ownerDocument.activeElement === next)
+    }
+    ref.current = Object.defineProperty(attach, 'current', {
+      get: () => node.current,
+    }) as SpatialRef<T>
+  }
+
+  const { autofocus, navUp, navDown, navLeft, navRight } = options
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    el.setAttribute('data-focusable', '')
-    if (latest.current.autofocus) el.setAttribute('data-spatial-autofocus', '')
-    for (const dir of ['up', 'down', 'left', 'right'] as const) {
-      const key = `nav${dir[0]!.toUpperCase()}${dir.slice(1)}` as keyof UseFocusableOptions
-      const value = latest.current[key]
-      if (typeof value === 'string') el.setAttribute(`data-nav-${dir}`, value)
+    const el = node.current
+    if (el) {
+      applyFocusableAttributes(el, { autofocus, navUp, navDown, navLeft, navRight }, owned.current)
     }
-    const onFocus = () => setFocused(true)
-    const onBlur = () => setFocused(false)
-    const onSpatialFocus = (e: Event) => latest.current.onFocus?.(e as SpatialEvent)
-    const onActivate = (e: Event) => latest.current.onActivate?.(e as SpatialEvent)
-    el.addEventListener('focus', onFocus)
-    el.addEventListener('blur', onBlur)
-    el.addEventListener('spatial:focus', onSpatialFocus)
-    el.addEventListener('spatial:activate', onActivate)
-    return () => {
-      el.removeEventListener('focus', onFocus)
-      el.removeEventListener('blur', onBlur)
-      el.removeEventListener('spatial:focus', onSpatialFocus)
-      el.removeEventListener('spatial:activate', onActivate)
-    }
-  }, [])
+  }, [autofocus, navUp, navDown, navLeft, navRight])
 
-  return { ref, focused }
+  return { ref: ref.current, focused }
 }
 
 export interface SpatialContainerProps {
@@ -134,7 +180,7 @@ export interface SpatialContainerProps {
 }
 
 /** Renders an element marked as a spatial container (focus group / zone). */
-export function SpatialContainer(props: SpatialContainerProps): ReactNode {
+export function SpatialContainer(props: SpatialContainerProps): ReactElement {
   const { as = 'div', contain, wrap, remember, children, ...rest } = props
   const tokens = [contain && 'contain', wrap && 'wrap', remember && 'remember'].filter(Boolean).join(' ')
   return createElement(as, { ...rest, 'data-spatial-container': tokens }, children)

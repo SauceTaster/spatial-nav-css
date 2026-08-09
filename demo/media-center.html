@@ -64,6 +64,7 @@
     font-size: 12px; line-height: 1.3;
     background: linear-gradient(170deg, var(--p1, #3a4a5a), #15181b 80%);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    border: 0; color: inherit; text-align: left;
   }
   .poster .yr { opacity: 0.6; font-size: 11px; }
   .poster.wide { flex-basis: 230px; height: 130px; }
@@ -119,30 +120,30 @@
 
   <h3>Continue Watching <small style="opacity:.55; font-weight:400">— hold Enter/Ⓐ on a tile to remove it</small></h3>
   <div class="rail" data-spatial-container="remember" id="continue">
-    <div class="poster wide spatial-pop" data-focusable style="--p1:#46342c">Signal Hunters <span class="yr">S2 · E4</span><span class="progress"><i style="width:64%"></i></span></div>
-    <div class="poster wide spatial-pop" data-focusable style="--p1:#2c4046">Deep Field <span class="yr">S1 · E9</span><span class="progress"><i style="width:31%"></i></span></div>
-    <div class="poster wide spatial-pop" data-focusable style="--p1:#35462c">Orchard Road <span class="yr">2019</span><span class="progress"><i style="width:88%"></i></span></div>
-    <div class="poster wide spatial-pop" data-focusable style="--p1:#46282f">Glass Harbor <span class="yr">S3 · E1</span><span class="progress"><i style="width:12%"></i></span></div>
+    <button class="poster wide spatial-pop" style="--p1:#46342c">Signal Hunters <span class="yr">S2 · E4</span><span class="progress"><i style="width:64%"></i></span></button>
+    <button class="poster wide spatial-pop" style="--p1:#2c4046">Deep Field <span class="yr">S1 · E9</span><span class="progress"><i style="width:31%"></i></span></button>
+    <button class="poster wide spatial-pop" style="--p1:#35462c">Orchard Road <span class="yr">2019</span><span class="progress"><i style="width:88%"></i></span></button>
+    <button class="poster wide spatial-pop" style="--p1:#46282f">Glass Harbor <span class="yr">S3 · E1</span><span class="progress"><i style="width:12%"></i></span></button>
   </div>
 
   <h3>Recently Added — Movies</h3>
   <div class="rail" data-spatial-container="remember">
-    <div class="poster spatial-pop" data-focusable style="--p1:#4a3a2a">Meridian <span class="yr">2025</span></div>
-    <div class="poster spatial-pop" data-focusable style="--p1:#2a3a4a">Undertow <span class="yr">2024</span></div>
-    <div class="poster spatial-pop" data-focusable style="--p1:#3a2a4a">Pale Circuit <span class="yr">2025</span></div>
-    <div class="poster spatial-pop" data-focusable style="--p1:#2a4a3a">The Gleaners <span class="yr">2023</span></div>
-    <div class="poster spatial-pop" data-focusable style="--p1:#4a2a2a">Night Cartography <span class="yr">2026</span></div>
-    <div class="poster spatial-pop" data-focusable style="--p1:#44442a">Sundogs <span class="yr">2024</span></div>
-    <div class="poster spatial-pop" data-focusable style="--p1:#2a4444">Roman Candles <span class="yr">2025</span></div>
+    <button class="poster spatial-pop" style="--p1:#4a3a2a">Meridian <span class="yr">2025</span></button>
+    <button class="poster spatial-pop" style="--p1:#2a3a4a">Undertow <span class="yr">2024</span></button>
+    <button class="poster spatial-pop" style="--p1:#3a2a4a">Pale Circuit <span class="yr">2025</span></button>
+    <button class="poster spatial-pop" style="--p1:#2a4a3a">The Gleaners <span class="yr">2023</span></button>
+    <button class="poster spatial-pop" style="--p1:#4a2a2a">Night Cartography <span class="yr">2026</span></button>
+    <button class="poster spatial-pop" style="--p1:#44442a">Sundogs <span class="yr">2024</span></button>
+    <button class="poster spatial-pop" style="--p1:#2a4444">Roman Candles <span class="yr">2025</span></button>
   </div>
 
   <h3>TV Shows</h3>
   <div class="rail" data-spatial-container="remember">
-    <div class="poster spatial-pop" data-focusable style="--p1:#3c2f46">Latchkey <span class="yr">3 seasons</span></div>
-    <div class="poster spatial-pop" data-focusable style="--p1:#2f4646">Coldwater Line <span class="yr">2 seasons</span></div>
-    <div class="poster spatial-pop" data-focusable style="--p1:#46462f">Bitter Lake <span class="yr">5 seasons</span></div>
-    <div class="poster spatial-pop" data-focusable style="--p1:#462f2f">The Understudy <span class="yr">1 season</span></div>
-    <div class="poster spatial-pop" data-focusable style="--p1:#2f3946">Half-Light <span class="yr">4 seasons</span></div>
+    <button class="poster spatial-pop" style="--p1:#3c2f46">Latchkey <span class="yr">3 seasons</span></button>
+    <button class="poster spatial-pop" style="--p1:#2f4646">Coldwater Line <span class="yr">2 seasons</span></button>
+    <button class="poster spatial-pop" style="--p1:#46462f">Bitter Lake <span class="yr">5 seasons</span></button>
+    <button class="poster spatial-pop" style="--p1:#462f2f">The Understudy <span class="yr">1 season</span></button>
+    <button class="poster spatial-pop" style="--p1:#2f3946">Half-Light <span class="yr">4 seasons</span></button>
   </div>
 </main>
 
@@ -151,15 +152,15 @@
   <span id="status" style="margin-left:auto"></span>
 </footer>
 
-<dialog class="settings" id="settings" data-spatial-container="contain">
-  <h2>Playback Settings</h2>
+<dialog class="settings" id="settings" data-spatial-container="contain" aria-labelledby="settings-title">
+  <h2 id="settings-title">Playback Settings</h2>
   <div class="body">
     <div class="row">
-      <label>Volume <span id="vol-val">80%</span></label>
+      <label for="vol">Volume <span id="vol-val">80%</span></label>
       <input type="range" id="vol" min="0" max="100" value="80">
     </div>
     <div class="row">
-      <label>Subtitle size <span id="sub-val">100%</span></label>
+      <label for="sub">Subtitle size <span id="sub-val">100%</span></label>
       <input type="range" id="sub" min="50" max="200" value="100" step="10">
     </div>
     <div class="row">
@@ -221,21 +222,28 @@
     const t = e.target.textContent.trim().split('\n')[0]
     status.textContent = t ? `▸ ${t.slice(0, 40)}` : ''
   })
+  const playPoster = (poster) => {
+    status.textContent = `▶ playing ${poster.textContent.trim().split('\n')[0]}`
+  }
+  document.addEventListener('click', (e) => {
+    const poster = e.target.closest('.poster')
+    if (poster) playPoster(poster)
+  })
   document.addEventListener('spatial:activate', (e) => {
-    // Continue Watching tiles act on *release* instead (tap vs. long-press).
-    if (e.target.classList.contains('poster') && !e.target.closest('#continue')) {
-      status.textContent = `▶ playing ${e.target.textContent.trim().split('\n')[0]}`
-    }
+    // Continue Watching tiles act on release (tap vs. long-press), so suppress
+    // the engine's immediate synthetic click. Pointer/native clicks still use
+    // the ordinary click path above.
+    if (e.target.closest('#continue .poster')) e.preventDefault()
   })
 
   // Long-press a Continue Watching tile → confirm → remove. The engine's
-  // autoRestoreFocus (default on) moves focus to a surviving neighbor.
+  // autoRestoreFocus (default on) follows its documented fallback chain.
   document.addEventListener('spatial:activaterelease', async (e) => {
     const poster = e.target.closest('#continue .poster')
     if (!poster) return
     const title = poster.textContent.trim().split('\n')[0]
     if (e.detail.durationMs < 600) {
-      status.textContent = `▶ playing ${title}`
+      playPoster(poster)
       return
     }
     const remove = await spatialConfirm(`Remove “${title}” from Continue Watching?`, {

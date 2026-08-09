@@ -39,6 +39,10 @@ describe('perf budget (506 focusables, one findTarget pass)', () => {
     const { styleReads } = countCalls()
     // eslint-disable-next-line no-console
     console.warn(`styleReads per findTarget pass: ${styleReads}`)
+    // Floor: config is read via getComputedStyle, so a real pass must make at
+    // least one call — 0 means the spy stopped intercepting and the ceiling
+    // below would pass vacuously.
+    expect(styleReads).toBeGreaterThan(0)
     // Budget: roughly one config read per distinct element touched in the
     // pass (candidates + containers + ancestors), with modest slack. The
     // un-cached implementation measured ~6 reads per element per touch

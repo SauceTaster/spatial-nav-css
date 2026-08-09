@@ -8,8 +8,10 @@ import { DIRECTIONS } from './types'
  *
  *  CSS custom properties (participate in the cascade, media queries, etc.):
  *    --nav-up / --nav-down / --nav-left / --nav-right: <selector> | none
- *    --spatial-container: contain | wrap | remember (space-separated tokens,
- *                         or just `container` / `normal` for a plain group)
+ *    --spatial-container: contain | wrap | remember (space-separated tokens;
+ *                         any other non-empty value, e.g. `container`, marks
+ *                         a plain group, while empty, `none`, and `normal`
+ *                         mean "not a container")
  *    --spatial-default-focus: auto
  *
  *  Data attributes (override CSS when both are present):
@@ -18,7 +20,7 @@ import { DIRECTIONS } from './types'
  *    data-spatial-autofocus
  *
  * The custom-property names intentionally echo the old CSS3 UI `nav-up`/
- * `nav-right` properties and the discontinued css-nav-1 draft.
+ * `nav-right` properties and the CSS Spatial Navigation Level 1 draft.
  *
  * Performance: one navigation pass reads config for many elements (origin,
  * candidates, ancestor containers), and `getComputedStyle` is the dominant
@@ -73,8 +75,11 @@ export function readNavConfig(el: HTMLElement, cache?: NavConfigCache): ElementN
     dataContainer !== null ||
     (cssContainer !== '' && cssContainer !== 'none' && cssContainer !== 'normal')
 
+  // A present data attribute replaces the CSS token list, matching the
+  // documented attribute-over-CSS precedence. A bare attribute therefore
+  // means a plain container even when CSS adds behavioral tokens.
   const tokens = new Set(
-    `${cssContainer} ${dataContainer ?? ''}`
+    (dataContainer ?? cssContainer)
       .split(/\s+/)
       .map((t) => t.toLowerCase())
       .filter((t): t is (typeof CONTAINER_TOKENS)[number] =>
@@ -97,22 +102,28 @@ export function readNavConfig(el: HTMLElement, cache?: NavConfigCache): ElementN
   return config
 }
 
-/** Nearest ancestor (exclusive) that is a spatial container, else null. */
+/** Nearest ancestor that is a spatial container, including a marked HTMLElement root. */
 export function findContainer(
   el: HTMLElement,
   root: Document | HTMLElement,
   cache?: NavConfigCache,
 ): HTMLElement | null {
+  if (!root.contains(el)) return null
+  if (el === root) return null
   let node: HTMLElement | null = el.parentElement
   while (node) {
-    if (node === root) return null
+    if (node === root) {
+      return root.nodeType === 1 && readNavConfig(root as HTMLElement, cache).isContainer
+        ? (root as HTMLElement)
+        : null
+    }
     if (readNavConfig(node, cache).isContainer) return node
     node = node.parentElement
   }
   return null
 }
 
-/** Chain of containers from the innermost (nearest to `el`) outward, ending inside `root`. */
+/** Chain from the innermost container outward, ending with a marked HTMLElement root if present. */
 export function containerChain(
   el: HTMLElement,
   root: Document | HTMLElement,

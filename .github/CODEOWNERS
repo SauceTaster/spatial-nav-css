@@ -1,0 +1,13 @@
+# CODEOWNERS requests review; a branch rule must separately require that review.
+* @SauceTaster
+
+# Treat supply-chain, release, and governance changes as maintainer-owned.
+/.github/ @SauceTaster
+/.changeset/ @SauceTaster
+/package.json @SauceTaster
+/package-lock.json @SauceTaster
+/SECURITY.md @SauceTaster
+/CODE_OF_CONDUCT.md @SauceTaster
+/MAINTAINERS.md @SauceTaster
+/RELEASE_CHECKLIST.md @SauceTaster
+/THIRD_PARTY_NOTICES.md @SauceTaster

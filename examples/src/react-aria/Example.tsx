@@ -1,12 +1,12 @@
 /**
  * React Aria Components interop example.
  *
- * The key idea: a RAC collection (ListBox/Menu/GridList) uses a roving
- * tabindex, so the spatial engine sees exactly ONE focusable per collection —
- * the whole list behaves as a single spatial stop, and entering it lands on
- * RAC's current item. RAC owns ↑/↓ inside the list (it preventDefaults them);
- * the keyboard adapter skips defaultPrevented events, so there's no
- * double-handling. Spatial nav takes the orthogonal axis and everything else.
+ * The tested vertical ListBox uses a roving tabindex, so the spatial engine
+ * sees one collection stop. RAC owns ↑/↓ keyboard events inside it; the
+ * keyboard adapter skips defaultPrevented events, and spatial navigation gets
+ * the orthogonal keyboard axis. Semantic gamepad intents bypass RAC's keyboard
+ * handling, so controller traversal inside a collection needs an app bridge
+ * or independently focusable items.
  *
  *  - spatialZone()       marks a layout region as a container
  *  - spatialFocusable()  marks custom tiles as stops (collections don't need it)

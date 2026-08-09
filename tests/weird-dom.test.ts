@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SpatialEngine } from '../src/core/engine'
 import { isElementVisible } from '../src/core/dom'
+import { createSpatialNavigation } from '../src/index'
+import type { AdapterContext, InputAdapter } from '../src/input/types'
 import { rect, rectProvider, type LayoutMap } from './helpers'
 
 function makeEngine(html: string, layout: LayoutMap, root?: Document | HTMLElement): SpatialEngine {
@@ -68,6 +70,132 @@ describe('hostile config values', () => {
   })
 })
 
+describe('focus request validation', () => {
+  it('rejects a target outside a scoped root', () => {
+    document.body.innerHTML = `
+      <div id="region"><button id="inside"></button></div>
+      <button id="outside"></button>`
+    const engine = new SpatialEngine({
+      root: document.getElementById('region')!,
+      visibilityFilter: () => true,
+      scrollBehavior: false,
+    })
+    const inside = document.getElementById('inside')!
+    const outside = document.getElementById('outside')!
+    engine.focus(inside)
+
+    expect(engine.focus(outside)).toBe(false)
+    expect(document.activeElement).toBe(inside)
+    expect(outside.classList.contains('spatial-focused')).toBe(false)
+  })
+
+  it('returns false for a malformed selector instead of throwing', () => {
+    const engine = makeEngine(`<button id="a"></button>`, { a: [0, 0, 80, 80] })
+    expect(() => engine.focus('##invalid(')).not.toThrow()
+    expect(engine.focus('##invalid(')).toBe(false)
+  })
+
+  it('rejects an invalid configured focusable selector at construction', () => {
+    expect(
+      () =>
+        new SpatialEngine({
+          focusableSelector: '##invalid(',
+          visibilityFilter: () => true,
+          scrollBehavior: false,
+        }),
+    ).toThrow(/focusableSelector must be a valid CSS selector/)
+  })
+
+  it('rejects invalid engine scoring values at construction', () => {
+    expect(
+      () => new SpatialEngine({ scoring: { centerWeight: Number.NaN }, scrollBehavior: false }),
+    ).toThrow(/centerWeight must be a finite non-negative number/)
+    expect(
+      () => new SpatialEngine({ scoring: { alignedOverlapRatio: 1.1 }, scrollBehavior: false }),
+    ).toThrow(/alignedOverlapRatio must be between 0 and 1/)
+  })
+
+  it('rejects a disabled native control without claiming focus moved', () => {
+    const engine = makeEngine(`<button id="a"></button><button id="disabled" disabled></button>`, {
+      a: [0, 0, 80, 80],
+      disabled: [100, 0, 80, 80],
+    })
+    const a = document.getElementById('a')!
+    const disabled = document.getElementById('disabled')!
+    engine.focus(a)
+    const afterFocus = vi.fn()
+    disabled.addEventListener('spatial:focus', afterFocus)
+
+    expect(engine.focus(disabled)).toBe(false)
+    expect(document.activeElement).toBe(a)
+    expect(afterFocus).not.toHaveBeenCalled()
+    expect(disabled.classList.contains('spatial-focused')).toBe(false)
+  })
+
+  it('relinquishes a focused control that becomes disabled', () => {
+    const engine = makeEngine(`<button id="a"></button>`, { a: [0, 0, 80, 80] })
+    const a = document.getElementById('a') as HTMLButtonElement
+    engine.focus(a)
+    a.disabled = true
+
+    expect(engine.getFocused()).toBeNull()
+    expect(engine.activate()).toBe(false)
+    expect(a.classList.contains('spatial-focused')).toBe(false)
+  })
+
+  it('undoes an engine-added tabindex when the browser refuses focus', () => {
+    const engine = makeEngine(`<div id="card" data-focusable></div>`, { card: [0, 0, 80, 80] })
+    const card = document.getElementById('card')!
+    card.focus = vi.fn()
+
+    expect(engine.focus(card)).toBe(false)
+    expect(card.hasAttribute('tabindex')).toBe(false)
+
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="composite" data-focusable></div><button id="actual"></button>`,
+    )
+    const composite = document.getElementById('composite')!
+    const actual = document.getElementById('actual')!
+    const focused = vi.fn()
+    composite.focus = () => actual.focus()
+    actual.addEventListener('spatial:focus', focused)
+
+    expect(engine.focus(composite)).toBe(true)
+    expect(document.activeElement).toBe(actual)
+    expect(engine.getFocused()).toBe(actual)
+    expect(composite.hasAttribute('tabindex')).toBe(false)
+    expect(focused).toHaveBeenCalledOnce()
+  })
+
+  it('does not emit spatial:focus when beforefocus removes the target', () => {
+    const engine = makeEngine(`<button id="a"></button><button id="doomed"></button>`, {
+      a: [0, 0, 80, 80],
+      doomed: [100, 0, 80, 80],
+    })
+    const a = document.getElementById('a')!
+    const doomed = document.getElementById('doomed')!
+    engine.focus(a)
+    const afterFocus = vi.fn()
+    doomed.addEventListener('spatial:beforefocus', () => doomed.remove(), { once: true })
+    doomed.addEventListener('spatial:focus', afterFocus)
+
+    expect(engine.focus(doomed)).toBe(false)
+    expect(document.activeElement).toBe(a)
+    expect(afterFocus).not.toHaveBeenCalled()
+    expect(doomed.classList.contains('spatial-focused')).toBe(false)
+  })
+
+  it('treats focusing the already-focused element as a no-op', () => {
+    const engine = makeEngine(`<button id="a"></button>`, { a: [0, 0, 80, 80] })
+    const a = document.getElementById('a')!
+    expect(engine.focus(a)).toBe(true)
+    expect(engine.focus(a)).toBe(false)
+    expect(document.activeElement).toBe(a)
+    expect(engine.getFocused()).toBe(a)
+  })
+})
+
 describe('structural oddities', () => {
   it('an element that is both focusable and a container is a stop AND a zone', () => {
     // The card itself is clickable; it also contains focusable children.
@@ -93,30 +221,33 @@ describe('structural oddities', () => {
   })
 
   it('survives pathologically deep nesting', { timeout: 20_000 }, () => {
-    // The ancestor walk is iterative (no stack growth with depth) and makes
-    // exactly one config read per distinct ancestor. jsdom's getComputedStyle
-    // dominates and slows superlinearly with depth (more so under coverage
-    // instrumentation) — 300 levels proves no stack overflow while staying
-    // comfortably inside the timeout; the explicit timeout absorbs the
-    // coverage overhead. Real DOMs are nowhere near this deep.
-    document.body.innerHTML = '<button id="a"></button>'
-    let parent: HTMLElement = document.body
-    for (let i = 0; i < 300; i++) {
-      const div = document.createElement('div')
-      parent.appendChild(div)
-      parent = div
+    // Isolate the iterative ancestor walk from jsdom's superlinear computed-
+    // style implementation: stylesheet behavior has dedicated tests, while
+    // this case verifies that 1,000 ancestors do not grow the JS call stack.
+    const emptyStyle = document.createElement('div').style
+    const styleSpy = vi.spyOn(window, 'getComputedStyle').mockReturnValue(emptyStyle)
+    try {
+      document.body.innerHTML = '<button id="a"></button>'
+      let parent: HTMLElement = document.body
+      for (let i = 0; i < 1_000; i++) {
+        const div = document.createElement('div')
+        parent.appendChild(div)
+        parent = div
+      }
+      const deep = document.createElement('button')
+      deep.id = 'deep'
+      parent.appendChild(deep)
+      const engine = new SpatialEngine({
+        getRect: rectProvider({ a: [0, 0, 80, 80], deep: [200, 0, 80, 80] }),
+        visibilityFilter: () => true,
+        scrollBehavior: false,
+      })
+      engine.focus(document.getElementById('a')!)
+      expect(() => engine.navigate('right')).not.toThrow()
+      expect(engine.getFocused()?.id).toBe('deep')
+    } finally {
+      styleSpy.mockRestore()
     }
-    const deep = document.createElement('button')
-    deep.id = 'deep'
-    parent.appendChild(deep)
-    const engine = new SpatialEngine({
-      getRect: rectProvider({ a: [0, 0, 80, 80], deep: [200, 0, 80, 80] }),
-      visibilityFilter: () => true,
-      scrollBehavior: false,
-    })
-    engine.focus(document.getElementById('a')!)
-    expect(() => engine.navigate('right')).not.toThrow()
-    expect(engine.getFocused()?.id).toBe('deep')
   })
 
   it('navigates from a zero-size origin', () => {
@@ -253,6 +384,29 @@ describe('visibility semantics (jsdom-safe branches)', () => {
     document.body.innerHTML = `<div ${attr}><button id="x"></button></div>`
     expect(isElementVisible(document.getElementById('x')!)).toBe(false)
   })
+
+  it('asks checkVisibility for CSS visibility under both option spellings', () => {
+    // Regression: only the post-Chromium-121 `visibilityProperty` spelling was
+    // passed. Engines in the ~105-120 band (including the Chromium builds on
+    // current Tizen/webOS TVs) understand only `checkVisibilityCSS` and drop
+    // unknown dictionary members silently, degrading the call to a
+    // rendered-box check that let `visibility: hidden` elements take focus.
+    document.body.innerHTML = '<button id="x"></button>'
+    const button = document.getElementById('x')!
+    let received: Record<string, unknown> | undefined
+
+    Object.defineProperty(button, 'checkVisibility', {
+      configurable: true,
+      value: (options: Record<string, unknown>) => {
+        received = options
+        // Stand in for an older engine: honor only the legacy option.
+        return options.checkVisibilityCSS !== true
+      },
+    })
+
+    expect(isElementVisible(button)).toBe(false)
+    expect(received).toMatchObject({ checkVisibilityCSS: true, visibilityProperty: true })
+  })
 })
 
 describe('multi-document (iframe)', () => {
@@ -273,6 +427,48 @@ describe('multi-document (iframe)', () => {
     expect(idoc.activeElement?.id).toBe('ib')
     iframe.remove()
   })
+
+  it('the composed API infers the iframe window and dispatches events in its realm', () => {
+    const iframe = document.createElement('iframe')
+    document.body.appendChild(iframe)
+    const idoc = iframe.contentDocument!
+    const iwin = iframe.contentWindow!
+    const IframeCustomEvent = (iwin as unknown as { CustomEvent: typeof CustomEvent }).CustomEvent
+    idoc.body.innerHTML = `<button id="ia"></button><button id="ib"></button>`
+    let context: AdapterContext | null = null
+    const adapter: InputAdapter = {
+      id: 'capture',
+      start(next) {
+        context = next
+      },
+      stop() {},
+    }
+    const nav = createSpatialNavigation({
+      root: idoc,
+      adapters: [adapter],
+      getRect: (el) => (el.id === 'ia' ? rect(0, 0, 80, 80) : rect(100, 0, 80, 80)),
+      visibilityFilter: () => true,
+      scrollBehavior: false,
+    })
+    let focusEvent: Event | null = null
+    idoc.getElementById('ia')!.addEventListener('spatial:focus', (event) => {
+      focusEvent = event
+    })
+
+    try {
+      nav.start()
+      expect(context).not.toBeNull()
+      expect(context!.window).toBe(iwin)
+      expect(() =>
+        context!.dispatch({ type: 'direction', direction: 'right', repeat: false, source: 'capture' }),
+      ).not.toThrow()
+      expect(idoc.activeElement?.id).toBe('ia')
+      expect(focusEvent).toBeInstanceOf(IframeCustomEvent)
+    } finally {
+      nav.destroy()
+      iframe.remove()
+    }
+  })
 })
 
 describe('shadow DOM', () => {
@@ -280,6 +476,7 @@ describe('shadow DOM', () => {
     document.body.innerHTML = `<div id="host"></div>`
     const shadow = document.getElementById('host')!.attachShadow({ mode: 'open' })
     const wrap = document.createElement('div')
+    wrap.setAttribute('data-spatial-container', 'wrap remember')
     wrap.innerHTML = `<button id="sa"></button><button id="sb"></button>`
     shadow.appendChild(wrap)
 
@@ -294,6 +491,15 @@ describe('shadow DOM', () => {
     // through shadowRoot.activeElement to keep tracking focus.
     expect(engine.getFocused()?.id).toBe('sa')
     expect(engine.navigate('right')).toBe(true)
+    expect(engine.getFocused()?.id).toBe('sb')
+    expect(engine.navigate('right')).toBe(true)
+    expect(engine.getFocused()?.id).toBe('sa')
+
+    const sb = wrap.querySelector<HTMLElement>('#sb')!
+    sb.focus()
+    expect(engine.getFocused()?.id).toBe('sb')
+    sb.blur()
+    expect(engine.focusFirst()).toBe(true)
     expect(engine.getFocused()?.id).toBe('sb')
   })
 })
@@ -356,6 +562,13 @@ describe('engine option contracts', () => {
 
   it('a custom focusClass is applied and moved', () => {
     document.body.innerHTML = `<button id="a"></button><button id="b"></button>`
+    expect(() => new SpatialEngine({ focusClass: '' })).toThrow(/one non-empty DOM class token/)
+    expect(() => new SpatialEngine({ focusClass: 'two tokens' })).toThrow(
+      /one non-empty DOM class token/,
+    )
+    expect(() => new SpatialEngine({ scrollBehavior: 'later' as ScrollBehavior })).toThrow(
+      /scrollBehavior/,
+    )
     const engine = new SpatialEngine({
       focusClass: 'my-ring',
       getRect: rectProvider({ a: [0, 0, 80, 80], b: [100, 0, 80, 80] }),
@@ -382,6 +595,7 @@ describe('engine option contracts', () => {
     })
     silent.focus(a)
     expect(spy).not.toHaveBeenCalled()
+    a.blur()
 
     const smooth = new SpatialEngine({
       getRect: () => rect(0, 0, 80, 80),
@@ -390,6 +604,36 @@ describe('engine option contracts', () => {
     })
     smooth.focus(a)
     expect(spy).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+  })
+
+  it('uses instant scrolling for opt-in smooth behavior under reduced motion', () => {
+    document.body.innerHTML = `<button id="a"></button>`
+    const a = document.getElementById('a')!
+    const scrollIntoView = vi.fn()
+    ;(a as HTMLElement & { scrollIntoView: typeof scrollIntoView }).scrollIntoView = scrollIntoView
+
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia')
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn(() => ({ matches: true })),
+    })
+
+    try {
+      const engine = new SpatialEngine({
+        getRect: () => rect(0, 0, 80, 80),
+        visibilityFilter: () => true,
+        scrollBehavior: 'smooth',
+      })
+      engine.focus(a)
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        block: 'nearest',
+        inline: 'nearest',
+        behavior: 'instant',
+      })
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'matchMedia', descriptor)
+      else Reflect.deleteProperty(window, 'matchMedia')
+    }
   })
 })
 

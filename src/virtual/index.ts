@@ -7,8 +7,8 @@
  * helper completes the pattern: compute the next index, ask the virtualizer
  * to scroll, wait for the item to mount, focus it.
  *
- * It is DOM-level and framework-agnostic — the same helper drives TanStack
- * Virtual's React/Vue/Svelte/Solid adapters and hand-rolled windowing:
+ * It is DOM-level and framework-agnostic, so it can bridge TanStack Virtual
+ * integrations or hand-rolled windowing without depending on a framework:
  *
  *   const cleanup = attachVirtualEdges(nav, {
  *     zone: scrollerEl,                       // the data-spatial-container
@@ -19,11 +19,12 @@
  * Items must carry their index (data-index by default — TanStack's
  * convention for dynamic measurement already puts it there).
  *
- * React Aria's Virtualizer needs none of this: RAC collections own arrow
- * keys along their orientation and virtualize internally, so the collection
- * stays a single spatial stop (see spatial-nav-css/react-aria).
+ * React Aria collections may instead own their oriented arrow-key behavior
+ * and virtualization internally. Test that integration's actual roving-
+ * tabindex and edge-key behavior (see spatial-nav-css/react-aria).
  */
 import type { Direction } from '../core/types'
+import { isHTMLElementNode } from '../core/dom'
 
 /** The subset of SpatialNavigation the helper needs. */
 export interface FocusHost {
@@ -44,8 +45,13 @@ export interface VirtualEdgeOptions {
    * Next index for a navigation past the mounted edge, or null to let the
    * edge stand. Override for grids (e.g. `i + columns` for 'down').
    * Default: ±1 along `axis`.
+   *
+   * `repeat` is true when the press came from a *held* control. A list long
+   * enough to need virtualizing is long enough that holding a direction
+   * should cover ground faster than one item per press — return a larger
+   * jump for those, the way the mounted part of the list does.
    */
-  step?: (index: number, direction: Direction) => number | null
+  step?: (index: number, direction: Direction, repeat: boolean) => number | null
   /** Read an item's index. Default: Number(el.dataset.index). */
   getIndex?: (el: HTMLElement) => number | null
   /** Find the mounted element for an index. Default: [data-index="i"] inside zone. */
@@ -82,24 +88,29 @@ export function attachVirtualEdges(nav: FocusHost, options: VirtualEdgeOptions):
       const raw = el.dataset.index
       if (raw === undefined) return null
       const n = Number(raw)
-      return Number.isNaN(n) ? null : n
+      return Number.isSafeInteger(n) ? n : null
     })
   const findElement =
     options.findElement ??
     ((index: number) => options.zone.querySelector<HTMLElement>(`[data-index="${index}"]`))
   const settle = options.settle ?? (() => new Promise<void>((r) => setTimeout(r, 0)))
   const maxAttempts = options.maxAttempts ?? 20
+  if (!Number.isSafeInteger(maxAttempts) || maxAttempts < 0) {
+    throw new RangeError('VirtualEdgeOptions.maxAttempts must be a non-negative safe integer')
+  }
 
   let pending = 0 // token to cancel a stale advance when a newer one starts
 
   const onEdge = (event: Event): void => {
-    const detail = (event as CustomEvent<{ direction: Direction | null }>).detail
+    const detail = (event as CustomEvent<{ direction: Direction | null; repeat?: boolean }>).detail
     const origin = event.target
-    if (!detail?.direction || !(origin instanceof HTMLElement)) return
+    if (!detail?.direction || !isHTMLElementNode(origin)) return
     const index = getIndex(origin)
     if (index === null) return
-    const next = step(index, detail.direction)
-    if (next === null || next < 0 || next >= options.count()) return
+    const next = step(index, detail.direction, detail.repeat === true)
+    const count = options.count()
+    if (!Number.isSafeInteger(count) || count < 0) return
+    if (next === null || !Number.isSafeInteger(next) || next < 0 || next >= count) return
 
     const token = ++pending
     options.scrollToIndex(next)
@@ -110,13 +121,21 @@ export function attachVirtualEdges(nav: FocusHost, options: VirtualEdgeOptions):
         await settle()
         if (token !== pending) return // a newer advance superseded this one
         // Focus left the origin some other way (pointer, programmatic, a
-        // different item) — this advance is stale; never yank focus.
+        // different item) — this advance is stale; do not reclaim focus.
         const focused = nav.getFocused()
         if (focused && focused !== origin) return
+        if (!focused) {
+          const doc = origin.ownerDocument
+          const active = doc.activeElement
+          if (active && active !== doc.body && active !== doc.documentElement) return
+        }
       }
     })()
   }
 
   options.zone.addEventListener('spatial:nofocustarget', onEdge)
-  return () => options.zone.removeEventListener('spatial:nofocustarget', onEdge)
+  return () => {
+    pending++
+    options.zone.removeEventListener('spatial:nofocustarget', onEdge)
+  }
 }

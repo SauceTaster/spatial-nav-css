@@ -1,0 +1,358 @@
+.sa-root {
+  display: grid;
+  gap: 16px;
+}
+.sa-head h1 {
+  margin: 0;
+  font-size: 20px;
+  font-family: ui-monospace, monospace;
+}
+.sa-muted {
+  margin: 2px 0 0;
+  font-size: 12px;
+  opacity: 0.62;
+  line-height: 1.5;
+}
+.sa-form {
+  display: grid;
+  gap: 14px;
+}
+.sa-body {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+/* ------------------------------------------------------------ category rail */
+.sa-cats {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+.sa-cats-heading {
+  margin: 0 0 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.45;
+}
+.sa-cat {
+  display: grid;
+  gap: 2px;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #18202b;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.sa-cat.is-active {
+  background: #1f3242;
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.sa-cat-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.sa-cat-blurb {
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+/* -------------------------------------------------------------- form panel */
+.sa-panel {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  min-height: 360px;
+}
+.sa-panel-title {
+  margin: 0;
+  font-size: 14px;
+}
+.sa-sub {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.5;
+}
+.sa-field {
+  display: grid;
+  gap: 5px;
+  max-width: 520px;
+}
+.sa-field-label {
+  font-size: 12px;
+  opacity: 0.8;
+}
+.sa-field-hint {
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.45;
+}
+.sa-field-error {
+  margin: 0;
+  font-size: 11px;
+  color: #ff8f7a;
+}
+.sa-input {
+  padding: 8px 10px;
+  border: 1px solid #2c3d51;
+  border-radius: 7px;
+  background: #101820;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+.sa-input-number {
+  width: 140px;
+}
+.sa-select {
+  width: 220px;
+}
+.sa-textarea {
+  resize: vertical;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+.sa-field.is-invalid .sa-input {
+  border-color: #ff8f7a;
+}
+.sa-switch {
+  appearance: none;
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: #2c3d51;
+  cursor: pointer;
+}
+.sa-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #c7d5e0;
+  transition: transform 120ms ease;
+}
+.sa-switch:checked {
+  background: var(--accent);
+}
+.sa-switch:checked::after {
+  transform: translateX(20px);
+}
+.sa-range {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sa-slider {
+  width: 260px;
+  accent-color: var(--accent);
+}
+.sa-range-value {
+  font: 12px ui-monospace, monospace;
+  opacity: 0.75;
+}
+
+/* ------------------------------------------------------------------ logs */
+.sa-logs {
+  display: grid;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+.sa-log-filters {
+  display: flex;
+  gap: 6px;
+}
+.sa-chip {
+  padding: 5px 11px;
+  border: none;
+  border-radius: 999px;
+  background: #18202b;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+}
+.sa-chip.is-active {
+  background: #1f3242;
+  color: #cfe6ff;
+}
+.sa-log-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sa-log {
+  display: grid;
+  grid-template-columns: 52px 120px 1fr;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: #101820;
+  font: 11px/1.6 ui-monospace, monospace;
+}
+.sa-log-level {
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.sa-log.is-error .sa-log-level {
+  color: #ff8f7a;
+}
+.sa-log.is-warn .sa-log-level {
+  color: #ffc46b;
+}
+.sa-log-service {
+  opacity: 0.6;
+}
+
+/* -------------------------------------------------------------- services */
+.sa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.sa-table th,
+.sa-table td {
+  padding: 7px 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.sa-table thead th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.45;
+}
+.sa-num {
+  font-family: ui-monospace, monospace;
+  opacity: 0.75;
+}
+.sa-state {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: #1c3327;
+  color: #8fe0a8;
+}
+.sa-state.is-stopped {
+  background: #33201c;
+  color: #ff8f7a;
+}
+.sa-state.is-degraded {
+  background: #332c1c;
+  color: #ffc46b;
+}
+.sa-row-actions {
+  display: flex;
+  gap: 6px;
+}
+.sa-mini {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: #1d2836;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+}
+
+/* ------------------------------------------------------------ danger zone */
+.sa-danger {
+  display: grid;
+  gap: 12px;
+}
+.sa-danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 14px;
+  border: 1px solid #47251f;
+  border-radius: 10px;
+  background: #1d1512;
+}
+.sa-danger-row strong {
+  font-size: 13px;
+}
+.sa-destructive {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 7px;
+  background: #7a2b20;
+  color: #ffd9d1;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+.sa-destructive:disabled {
+  opacity: 0.5;
+}
+
+/* --------------------------------------------------------------- save bar */
+.sa-savebar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #16202b;
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.sa-savebar-state {
+  font-size: 12px;
+  opacity: 0.7;
+}
+.sa-savebar-error {
+  font-size: 12px;
+  color: #ff8f7a;
+}
+.sa-savebar button {
+  margin-left: auto;
+}
+.sa-savebar button + button {
+  margin-left: 0;
+}
+.sa-primary,
+.sa-secondary {
+  padding: 9px 18px;
+  border: none;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 12px;
+}
+.sa-primary {
+  background: var(--accent);
+  color: #04121d;
+  font-weight: 600;
+}
+.sa-secondary {
+  background: #24384e;
+  color: inherit;
+}
+.sa-primary:disabled,
+.sa-secondary:disabled {
+  opacity: 0.45;
+}
+
+/* The confirm dialog rendered by spatial-nav-css/dialogs. */
+.sa-dialog {
+  border: 1px solid #47251f;
+  background: #16202b;
+  color: var(--text);
+}

@@ -17,20 +17,28 @@ jobs:
     name: Lint, types, build, package
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
+      - name: Use the repository npm version
+        run: npm install --global 'npm@11.16.0'
       - run: npm ci
       - name: Lint & format (Biome)
         run: npm run lint
       - name: Typecheck
         run: npm run typecheck
+      - name: LLM docs freshness (llms-full.txt)
+        run: npm run check:llms
       - name: Build
         run: npm run build
+      - name: Server-side import safety
+        run: npm run check:ssr
       - name: Package correctness (publint + are-the-types-wrong)
         run: npm run check:package
+      - name: React 17 declaration compatibility
+        run: npm run check:react17
 
   test:
     name: Test (Node ${{ matrix.node }})
@@ -38,20 +46,91 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        node: [22, 24, 26]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node }}
           cache: npm
+      - name: Use the repository npm version
+        run: npm install --global 'npm@11.16.0'
       - run: npm ci
       - name: Tests with coverage thresholds
         run: npm run test:coverage
       - name: Upload coverage report
-        if: matrix.node == 22
-        uses: actions/upload-artifact@v4
+        if: matrix.node == 24
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: coverage
           path: coverage/
           retention-days: 14
+
+  examples:
+    name: Examples (framework integrations)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            examples/package-lock.json
+      - name: Use the repository npm version
+        run: npm install --global 'npm@11.16.0'
+      - name: Install and build the library
+        run: |
+          npm ci
+          npm run build
+      - name: Install example dependencies
+        run: npm --prefix examples ci
+      - name: Typecheck examples
+        run: npm --prefix examples run typecheck
+      - name: Test examples
+        run: npm --prefix examples test
+      - name: Build examples
+        run: npm --prefix examples run build
+
+  handheld:
+    name: Handheld OS (integration stress test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            handheld-os/package-lock.json
+      - name: Use the repository npm version
+        run: npm install --global 'npm@11.16.0'
+      - name: Install the standalone harness
+        run: npm ci --prefix handheld-os
+      - name: Install Chromium for Storybook tests
+        run: npm exec --prefix handheld-os -- playwright install --with-deps chromium
+      - name: Run the standalone integration harness
+        run: npm run ci --prefix handheld-os
+
+  browsers:
+    name: Browser smoke (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Use the repository npm version
+        run: npm install --global 'npm@11.16.0'
+      - run: npm ci
+      - run: npm run build
+      - name: Install ${{ matrix.browser }}
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Run browser integration tests
+        run: npx playwright test --project=${{ matrix.browser }}
