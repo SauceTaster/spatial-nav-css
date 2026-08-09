@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Media server admin — spatial-nav-css</title>
+</head>
+<body>
+<div class="ex-head">
+  <a class="back" href="/">← all examples</a>
+  <h1><span class="lib">🖥 Media server admin</span> — four zones, one data grid, one modal</h1>
+  <p>A Jellyfin/Plex-style operations screen: libraries, an active-streams table built with
+     <strong>TanStack Table</strong> where every cell is a spatial stop, user rows that mutate under
+     the highlight, and storage pools. Data comes from <strong>MSW</strong> over <code>fetch</code>
+     and is cached by <strong>TanStack Query</strong>. Stopping a stream goes through the library's
+     own <code>spatialConfirm()</code> — the one place <code>contain</code> belongs.
+     Drive with <kbd>←↑↓→</kbd>, <kbd>Enter</kbd>; on a role <code>&lt;select&gt;</code>,
+     <kbd>↑↓</kbd> change the value and <kbd>→</kbd> leaves the control.</p>
+</div>
+<div id="app"></div>
+<script type="module" src="/src/app-media-server/main.tsx"></script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+.epg-root {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-areas: 'head side' 'main side';
+  gap: 18px;
+  align-items: start;
+}
+.epg-head {
+  grid-area: head;
+}
+.epg-head h1 {
+  margin: 0;
+  font-size: 20px;
+}
+.epg-muted {
+  margin: 2px 0 0;
+  font-size: 12px;
+  opacity: 0.62;
+}
+.epg-main {
+  grid-area: main;
+  min-width: 0;
+}
+.epg-side {
+  grid-area: side;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+/* --- time-of-day header -------------------------------------------------- */
+.epg-timebar {
+  display: flex;
+  border-radius: 10px 10px 0 0;
+  background: var(--panel);
+  font-size: 11px;
+}
+.epg-timebar-corner {
+  flex: none;
+  padding: 8px 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.45;
+}
+.epg-timebar-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.epg-timebar-track {
+  position: relative;
+  height: 30px;
+}
+.epg-tick {
+  position: absolute;
+  top: 8px;
+  padding-left: 6px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  font: 11px ui-monospace, monospace;
+  opacity: 0.65;
+}
+
+/* --- the guide grid ------------------------------------------------------ */
+.epg-scroller {
+  /* clamp(), never a bare vh: an embedding that reports a 0 or unknown
+     viewport (CEF, a preview iframe) collapses raw vh to 0, the virtualizer
+     then measures a 0-height scrollport and mounts no rows at all, and every
+     focusable ends up with a ~0px rect. See docs/edge-cases.md. */
+  height: clamp(320px, 58vh, 520px);
+  overflow: auto;
+  border-radius: 0 0 10px 10px;
+  background: #101720;
+  scrollbar-width: thin;
+}
+.epg-canvas {
+  position: relative;
+}
+.epg-now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #ff5f5f;
+  box-shadow: 0 0 8px rgba(255, 95, 95, 0.6);
+  z-index: 3;
+  pointer-events: none;
+}
+.epg-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+}
+.epg-row-skeleton {
+  background: linear-gradient(100deg, #131a24, #1b2531, #131a24);
+  opacity: 0.5;
+}
+.epg-channel {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  flex: none;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+}
+.epg-channel-number {
+  font: 12px ui-monospace, monospace;
+  opacity: 0.5;
+}
+.epg-channel-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.epg-lane {
+  position: relative;
+  flex: none;
+}
+.epg-programme {
+  position: absolute;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  overflow: hidden;
+  padding: 0 9px;
+  /* A border, not a margin: blocks are absolutely positioned, so only the
+     border can draw a seam without moving the rect the engine measures. */
+  border: 1px solid #101720;
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+}
+.epg-programme-title {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+.epg-programme-time {
+  font: 10px ui-monospace, monospace;
+  opacity: 0.55;
+}
+.epg-programme.is-onair {
+  background: #2b4256;
+}
+.epg-programme.is-recorded {
+  box-shadow: inset 0 0 0 1px #ff5f5f;
+}
+
+/* --- side rail ----------------------------------------------------------- */
+.epg-ranges {
+  display: flex;
+  gap: 8px;
+}
+.epg-range {
+  flex: 1;
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: #18202b;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+.epg-range.is-active {
+  background: #1f3242;
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.epg-detail {
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--panel);
+}
+.epg-detail.is-empty {
+  opacity: 0.7;
+}
+.epg-detail-channel {
+  margin: 0;
+  font: 11px ui-monospace, monospace;
+  opacity: 0.55;
+}
+.epg-detail-title {
+  margin: 6px 0 4px;
+  font-size: 16px;
+}
+.epg-detail-time {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.75;
+}
+.epg-detail-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.epg-detail-actions button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #1d2836;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+.epg-detail-actions .epg-primary {
+  background: var(--accent);
+  color: #04121d;
+  font-weight: 600;
+}
+.epg-foot {
+  margin: 10px 0 0;
+  font-size: 12px;
+  opacity: 0.55;
+}

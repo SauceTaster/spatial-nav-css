@@ -36,19 +36,46 @@ describe('debug overlay', () => {
   })
 
   it('marks the focused element and repaints on spatial:focus', () => {
-    document.body.innerHTML = `<button id="a"></button><button id="b"></button>`
+    document.body.innerHTML = `<button id="a"></button><button id="b"></button><div id="custom"></div>`
     engine = new SpatialEngine({
       getRect: rectProvider({ a: [0, 0, 80, 80], b: [100, 0, 80, 80] }),
       visibilityFilter: () => true,
       scrollBehavior: false,
     })
     handle = attachDebugOverlay(engine, { assumeVisible: true })
-    const focusedBoxes = () =>
-      [...layer()!.children].filter((el) => (el as HTMLElement).style.cssText.includes('248, 113, 113'))
+    const focusedBoxes = () => [...layer()!.querySelectorAll('[data-spatial-debug-focused]')]
     expect(focusedBoxes()).toHaveLength(0)
 
     engine.focus(document.getElementById('a')!)
     expect(focusedBoxes()).toHaveLength(1)
+
+    engine.focus(document.getElementById('custom')!)
+    expect(focusedBoxes()).toHaveLength(1)
+    expect(focusedBoxes()[0]?.textContent).toBe('current')
+  })
+
+  it('rejects an invalid focusableSelector before attaching anything', () => {
+    document.body.innerHTML = `<button id="a"></button>`
+    engine = new SpatialEngine({
+      getRect: rectProvider({ a: [0, 0, 80, 80] }),
+      visibilityFilter: () => true,
+      scrollBehavior: false,
+    })
+    expect(() => attachDebugOverlay(engine!, { focusableSelector: 'button, :::garbage' })).toThrow(
+      /focusableSelector must be a valid CSS selector/,
+    )
+    expect(layer()).toBeNull() // no leaked layer
+
+    // No leaked listeners either: repaint triggers must neither throw nor
+    // resurrect the overlay.
+    expect(() => {
+      document.dispatchEvent(new CustomEvent('spatial:focus'))
+      document.dispatchEvent(new Event('focusin'))
+      window.dispatchEvent(new Event('resize'))
+      window.dispatchEvent(new Event('scroll'))
+    }).not.toThrow()
+    expect(layer()).toBeNull()
+    expect(document.body.querySelectorAll('*')).toHaveLength(1) // just the button
   })
 
   it('detach removes the layer and stops listening', () => {

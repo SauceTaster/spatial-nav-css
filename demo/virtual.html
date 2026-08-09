@@ -47,7 +47,7 @@
   </nav>
 </div>
 
-<div id="scroller" data-spatial-container="remember">
+<div id="scroller" role="listbox" aria-label="Virtualized rows" data-spatial-container="remember">
   <div id="spacer"></div>
 </div>
 
@@ -86,6 +86,9 @@
       el.className = 'vrow spatial-pop'
       el.dataset.index = i
       el.setAttribute('data-focusable', '')
+      el.setAttribute('role', 'option')
+      el.setAttribute('aria-posinset', String(i + 1))
+      el.setAttribute('aria-setsize', String(TOTAL))
       el.style.top = `${i * ROW + 2}px`
       el.innerHTML = `Row ${i} <small>#${String(i).padStart(5, '0')}</small>`
       spacer.appendChild(el)

@@ -85,6 +85,7 @@
     align-items: flex-end;
     padding: 12px;
     font-size: 13px;
+    border: 0; color: inherit; text-align: left;
   }
   .card.wide { flex-basis: 260px; height: 130px; }
 
@@ -124,34 +125,34 @@
 <main>
   <h2>Featured <span class="hint">(row wraps around)</span></h2>
   <div class="row" data-spatial-container="wrap remember">
-    <div class="card wide spatial-pop" data-focusable>Half-Loop 3</div>
-    <div class="card wide spatial-pop" data-focusable>Portal Reloaded</div>
-    <div class="card wide spatial-pop" data-focusable>Deck Verified</div>
-    <div class="card wide spatial-pop" data-focusable>Proton Prime</div>
+    <button class="card wide spatial-pop">Half-Loop 3</button>
+    <button class="card wide spatial-pop">Portal Reloaded</button>
+    <button class="card wide spatial-pop">Deck Verified</button>
+    <button class="card wide spatial-pop">Proton Prime</button>
   </div>
 
   <h2>New &amp; trending <span class="hint">(plain group — focus exits where geometry says)</span></h2>
   <div class="row" data-spatial-container>
-    <div class="card spatial-pop" data-focusable>Card 1</div>
-    <div class="card spatial-pop" data-focusable>Card 2</div>
-    <div class="card spatial-pop" data-focusable>Card 3</div>
-    <div class="card spatial-pop" data-focusable>Card 4</div>
-    <div class="card spatial-pop" data-focusable>Card 5</div>
-    <div class="card spatial-pop" data-focusable>Card 6</div>
+    <button class="card spatial-pop">Card 1</button>
+    <button class="card spatial-pop">Card 2</button>
+    <button class="card spatial-pop">Card 3</button>
+    <button class="card spatial-pop">Card 4</button>
+    <button class="card spatial-pop">Card 5</button>
+    <button class="card spatial-pop">Card 6</button>
   </div>
 
   <h2>Remembers its column <span class="hint">(re-enter this section: focus restores)</span></h2>
   <div class="row" data-spatial-container="remember">
-    <div class="card spatial-pop" data-focusable>Slot A</div>
-    <div class="card spatial-pop" data-focusable>Slot B</div>
-    <div class="card spatial-pop" data-focusable>Slot C</div>
-    <div class="card spatial-pop" data-focusable>Slot D</div>
+    <button class="card spatial-pop">Slot A</button>
+    <button class="card spatial-pop">Slot B</button>
+    <button class="card spatial-pop">Slot C</button>
+    <button class="card spatial-pop">Slot D</button>
   </div>
 </main>
 
 <aside class="log">
   <h3>Events</h3>
-  <div class="hint" style="margin-bottom:8px">press <strong>D</strong> — debug overlay (the engine's view)</div>
+  <div class="hint" style="margin-bottom:8px">press <strong>D</strong> — approximate DOM debug overlay</div>
   <div id="log"></div>
 </aside>
 

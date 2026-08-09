@@ -32,31 +32,42 @@ export function projectedOverlap(a: NavRect, b: NavRect, axis: 'x' | 'y'): numbe
  *
  *  - 'beyond':      the candidate's near edge is past the origin's far edge —
  *                   unambiguously in the direction of travel.
- *  - 'overlapping': the rects overlap on the navigation axis but the
- *                   candidate's center is still in the direction of travel.
- *                   Used as a fallback tier so overlapping layouts still work.
+ *  - 'overlapping': the rects overlap on the navigation axis, but the
+ *                   candidate still reaches further in the direction of
+ *                   travel. A fallback tier so overlapping layouts work.
  *  - null:          not in that direction.
+ *
+ * The overlapping tier compares *edges*, not centers, and requires the
+ * candidate to be shifted in the direction of travel rather than merely
+ * larger. Both halves matter:
+ *
+ *  - Centers are size-dependent: a narrow item sharing its left edge with a
+ *    wider one has a center further left, so it read as "to the left" of a
+ *    neighbour it is only below, and pressing left in a mixed-width grid
+ *    moved diagonally instead of leaving the row.
+ *  - A candidate that *encloses* the origin on this axis (starts before it
+ *    and ends after it) is not past it in either direction. Without the
+ *    near-edge test, a full-height sticky row label beside slightly inset
+ *    content captured every downward press in its row.
  */
 export function classifyDirection(
   origin: NavRect,
   candidate: NavRect,
   dir: Direction,
 ): 'beyond' | 'overlapping' | null {
-  const co = rectCenter(origin)
-  const cc = rectCenter(candidate)
   switch (dir) {
     case 'left':
       if (candidate.right <= origin.left) return 'beyond'
-      return cc.x < co.x ? 'overlapping' : null
+      return candidate.left < origin.left && candidate.right <= origin.right ? 'overlapping' : null
     case 'right':
       if (candidate.left >= origin.right) return 'beyond'
-      return cc.x > co.x ? 'overlapping' : null
+      return candidate.right > origin.right && candidate.left >= origin.left ? 'overlapping' : null
     case 'up':
       if (candidate.bottom <= origin.top) return 'beyond'
-      return cc.y < co.y ? 'overlapping' : null
+      return candidate.top < origin.top && candidate.bottom <= origin.bottom ? 'overlapping' : null
     case 'down':
       if (candidate.top >= origin.bottom) return 'beyond'
-      return cc.y > co.y ? 'overlapping' : null
+      return candidate.bottom > origin.bottom && candidate.top >= origin.top ? 'overlapping' : null
   }
 }
 
@@ -64,7 +75,7 @@ export function classifyDirection(
  * Distance score between origin and a candidate for a given direction.
  * Lower is better.
  *
- * The model is inspired by the (discontinued) CSS Spatial Navigation Level 1
+ * The model is inspired by the CSS Spatial Navigation Level 1 Working Draft
  * distance function, simplified for predictability:
  *
  *   score = euclideanGap                    // distance between closest edges
@@ -78,13 +89,13 @@ export function classifyDirection(
  * band that laterally contains the origin needs no off-axis travel and must
  * not be penalized for its breadth (its center can be far off to one side).
  * centerOffset (lightly weighted) then prefers the most in-line candidate
- * among otherwise-equal ones, without letting a wide zone's off-center mass
- * beat genuine proximity.
+ * among otherwise-equal ones while reducing a wide zone's displaced-center
+ * influence in ordinary layouts.
  *
  * "Aligned" means the projections on the axis orthogonal to `dir` overlap —
  * i.e. the candidate is in the same row (for left/right) or column (for
- * up/down). Aligned candidates always beat misaligned ones, which matches
- * how Panorama-style console UIs feel: pressing "right" stays in the row.
+ * up/down). With the default finite penalty, aligned candidates dominate
+ * ordinary viewport-scale layouts, keeping rightward moves in the row.
  */
 export function distanceScore(
   origin: NavRect,
@@ -104,12 +115,21 @@ export function distanceScore(
     : Math.max(candidate.left - co.x, co.x - candidate.right, 0)
   const centerOffset = horizontal ? Math.abs(cc.y - co.y) : Math.abs(cc.x - co.x)
   const overlap = projectedOverlap(origin, candidate, horizontal ? 'y' : 'x')
-  // Sliver overlaps don't count as same-row/column: require the overlap to
-  // be a meaningful fraction of the origin's own extent (see ScoringOptions.
-  // alignedOverlapRatio). Zero-extent origins (collapsed elements, wrap
-  // lines) keep the any-overlap rule.
+  // Sliver overlaps don't count as same-row/column: require the overlap to be
+  // a meaningful fraction of the *smaller* of the two extents (see
+  // ScoringOptions.alignedOverlapRatio).
+  //
+  // Measuring against the origin alone made the test scale with the origin's
+  // size: a full-width control — a scrubber, a wide search field — could not
+  // be "aligned" with an ordinary button at all, because no button is 20% as
+  // wide as the viewport. A distant, wider neighbour would then beat the one
+  // directly above it, and which one won changed with the window width.
+  // Against the smaller extent, "do these two share a row/column?" means the
+  // same thing whichever of them you are standing on.
   const originExtent = horizontal ? origin.height : origin.width
-  const aligned = overlap > 0 && overlap >= originExtent * scoring.alignedOverlapRatio
+  const candidateExtent = horizontal ? candidate.height : candidate.width
+  const reference = Math.min(originExtent, candidateExtent)
+  const aligned = overlap > 0 && overlap >= reference * scoring.alignedOverlapRatio
 
   return (
     euclidean +
@@ -155,8 +175,11 @@ export function findBestCandidate<T>(
   return best
 }
 
-/** Smallest rect covering all inputs. */
+/** Smallest rect covering all inputs. An empty collection returns a zero rect. */
 export function unionRects(rects: ReadonlyArray<NavRect>): NavRect {
+  if (rects.length === 0) {
+    return { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }
+  }
   let left = Infinity
   let top = Infinity
   let right = -Infinity

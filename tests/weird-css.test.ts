@@ -198,8 +198,9 @@ describe('cascade dynamics', () => {
   it('inherited container values (no @property) degrade without crashing', () => {
     // Without @property registration, --spatial-container inherits to every
     // descendant — the pathological case the shipped stylesheet protects
-    // against in real browsers. The engine must stay coherent regardless:
-    // siblings remain reachable and the trap still holds.
+    // against in modern browsers. The inherited inner contain scope safely
+    // blocks the move instead of crashing; applications supporting browsers
+    // without @property must use the documented attribute/reset fallback.
     const engine = setup(
       `.zone { --spatial-container: contain; }`,
       `<div class="zone">
@@ -211,8 +212,8 @@ describe('cascade dynamics', () => {
     )
     engine.focus(document.getElementById('x')!)
     expect(() => engine.navigate('right')).not.toThrow()
-    expect(engine.getFocused()?.id).toBe('y')
-    expect(engine.navigate('right')).toBe(false) // still trapped
+    expect(engine.navigate('right')).toBe(false)
+    expect(engine.getFocused()?.id).toBe('x')
   })
 
   it('elements detached mid-read do not break config reading', () => {

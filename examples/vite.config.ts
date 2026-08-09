@@ -1,9 +1,10 @@
 import { fileURLToPath, URL } from 'node:url'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import vue from '@vitejs/plugin-vue'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { svelteTesting } from '@testing-library/svelte/vite'
+import solid from 'vite-plugin-solid'
 
 const src = (p: string) => fileURLToPath(new URL(`../src/${p}`, import.meta.url))
 
@@ -33,6 +34,11 @@ const page = (name: string) => fileURLToPath(new URL(`./${name}.html`, import.me
 
 export default defineConfig({
   build: {
+    // The app examples await startMockApi() at module scope so the first
+    // paint is a real loading state rather than a failed request. Top-level
+    // await needs a modern target; these are demo pages, not shipped library
+    // code, so there is nothing to gain from a lower one.
+    target: 'esnext',
     rollupOptions: {
       input: {
         index: fileURLToPath(new URL('./index.html', import.meta.url)),
@@ -45,11 +51,26 @@ export default defineConfig({
         'tanstack-table': page('tanstack-table'),
         echarts: page('echarts'),
         'react-flow': page('react-flow'),
+        solid: page('solid'),
+        lit: page('lit'),
+        'onscreen-keyboard': page('onscreen-keyboard'),
+        'app-game-launcher': page('app-game-launcher'),
+        'app-game-ui': page('app-game-ui'),
+        'app-media-server': page('app-media-server'),
+        'app-sysadmin': page('app-sysadmin'),
+        'app-epg': page('app-epg'),
+        'app-dashboard': page('app-dashboard'),
+        'lib-radix': page('lib-radix'),
+        'lib-mui': page('lib-mui'),
+        'lib-headless': page('lib-headless'),
       },
     },
   },
   plugins: [
-    react(),
+    // React and Solid both compile JSX — scope each to its own tree so the
+    // transforms never see the other framework's components.
+    react({ exclude: [/src\/solid\//] }),
+    solid({ include: [/src\/solid\//] }),
     vue(),
     // The example deliberately reads `options`/`onReady` props once at init;
     // silence only that advisory, keep every other Svelte warning.

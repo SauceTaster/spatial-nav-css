@@ -1,0 +1,2874 @@
+<!--
+  spatial-nav-css — full documentation in a single file, for LLMs and other
+  tools that want the whole picture at once. Generated from README.md and
+  docs/ by scripts/build-llms.mjs; do not edit by hand. The curated index
+  lives in llms.txt.
+-->
+
+<!-- source: README.md -->
+
+# spatial-nav-css
+
+[![CI](https://github.com/SauceTaster/spatial-nav-css/actions/workflows/ci.yml/badge.svg)](https://github.com/SauceTaster/spatial-nav-css/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/SauceTaster/spatial-nav-css/actions/workflows/codeql.yml/badge.svg)](https://github.com/SauceTaster/spatial-nav-css/actions/workflows/codeql.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![zero runtime deps](https://img.shields.io/badge/runtime%20deps-0-brightgreen)
+
+> **Pre-release:** the source is public, but `spatial-nav-css` has not yet
+> been published to npm. The package-name imports below describe the intended
+> first-release surface; evaluate the library from a reviewed repository clone
+> until the initial release checklist is complete.
+
+Spatial (directional) navigation for web UIs, configured through CSS and driven
+by pluggable input adapters. Its interaction model is inspired by **Valve's
+Panorama UI** in Dota 2 and Counter-Strike and by the
+**[W3C CSS Spatial Navigation Level 1 Working Draft](https://www.w3.org/TR/css-nav-1/)**
+(`css-nav-1`, last published in 2019 and not broadly implemented by browsers).
+This is an independent JavaScript library, not a standards polyfill or a
+Panorama compatibility layer.
+
+Press **right** and focus moves to the thing that is spatially to the right.
+The built-in adapters cover keyboards, browser-exposed standard-mapping
+gamepads, and common TV-remote key events. The adapter interface supports
+host-specific input such as Steamworks actions, dedicated IR hardware, or
+other devices.
+
+The supported repository-tooling environment is Node.js 22 or newer with the
+`packageManager`-declared npm version. From a repository clone:
+
+```sh
+npm ci             # then:
+npm run build      # ESM + CJS + .d.ts into dist/
+npm test           # vitest suite
+npm run demo       # demo gallery at http://localhost:4173/demo/
+```
+
+The demo gallery opens with a **quick start** page (a live UI next to the
+three steps of code that drive it) and an **advanced toolkit** page
+(`spatialAlert`/`spatialConfirm` dialogs, long-press via
+`spatial:activaterelease`, `autoRestoreFocus`, held-key throttling, the debug
+overlay), then showcases the engine across UI archetypes: a Plex-style
+**media center** (rails, settings modal, long-press tile removal), a retro
+**emulator frontend**, a **VR panel** scene (3D transforms), a console
+**controller-settings UI** with a live gamepad tester, the original
+Steam-style launcher (press `D` for the debug overlay), a **virtualized
+10,000-item list**, and the zero-framework web-components page. Each demo keeps
+its app markup, styles, and script together in one HTML file and imports the
+built library and shared stylesheet from adjacent files.
+
+[`examples/`](https://github.com/SauceTaster/spatial-nav-css/tree/main/examples)
+is a standalone package (its own `package.json`, so none of it lands in your
+install) with three kinds of example. Every one is runnable with
+`npm run dev` and is also a headless regression test (`npm test`).
+
+- **Complete applications** — the ones to copy from. A game launcher, a media
+  server admin console, a sysadmin settings screen, a TV guide, an ops
+  dashboard, and a game pause screen: real component structure, with the
+  network mocked by **MSW** and cached by **TanStack Query**, so you get
+  genuine loading, refetch, optimistic-update, and validation-error states
+  rather than hardcoded arrays.
+- **Framework and library integrations** — React, Vue, Svelte, Solid, Lit,
+  React Aria, Web Components; Radix UI, Material UI, Headless UI, Ark UI;
+  TanStack Table/Virtual, ECharts, React Flow. The component-library pages
+  document exactly what portals, focus traps, and roving tabindex require.
+- **UI patterns** — an on-screen TV search keyboard, and the focus
+  inclusion/exclusion cheat-sheet.
+
+Because the MSW handlers run in both the browser and the tests, those examples
+exercise the same data lifecycle in CI that you see on the page.
+
+## Quick start
+
+```ts
+import { createSpatialNavigation } from 'spatial-nav-css'
+import 'spatial-nav-css/css' // focus ring + theming variables
+
+const nav = createSpatialNavigation({ autofocus: true })
+nav.start()
+```
+
+No build tools? A minified IIFE bundle ships as `dist/spatial-nav.global.js`
+(exposed via the `unpkg`/`jsdelivr` fields) with the framework-free surface —
+core, `<spatial-nav>` elements, dialogs, virtual-list helper, and debug
+overlay — on `window.SpatialNav`:
+
+```html
+<link rel="stylesheet" href="https://unpkg.com/spatial-nav-css/css/spatial.css">
+<script src="https://unpkg.com/spatial-nav-css"></script>
+<script>
+  SpatialNav.createSpatialNavigation({ autofocus: true }).start()
+</script>
+```
+
+Keyboard arrows and browser-exposed standard-mapping gamepads can now move
+focus spatially. The default selector includes links, enabled form controls,
+the first summary in a details element, elements carrying `contenteditable`
+other than `false`, media elements with controls, iframes, and elements with a
+non-negative `tabindex`. Add `data-focusable` for an intentional spatial
+stop, or set `focusableSelector` when your application needs a different
+definition.
+
+### Accessibility and native semantics
+
+Spatial focus is real DOM focus, but moving DOM focus does not by itself make a
+custom control accessible. Prefer native `<button>`, `<a>`, and form controls
+for actions. If a custom element is unavoidable, give it the appropriate
+accessible name, role, state, and keyboard behavior, then test it with the
+assistive technologies you support.
+
+A non-native `data-focusable` element with no existing `tabindex` receives
+`tabindex="-1"` on first spatial focus; it therefore does not automatically
+join the Tab order. Add `tabindex="0"` only when the element should also be an
+independent Tab stop. `contain` constrains this library's directional search
+only—it is not a general focus trap and does not contain Tab, pointer, or
+assistive-technology navigation. Use native modal dialogs or a complete
+accessible modal pattern for modal UI, and use `inert`, `hidden`, disabling, or
+removal for unavailable content.
+
+`aria-disabled="true"` communicates state but does not disable native focus or
+click behavior, and the engine does not exclude it like native `:disabled`.
+An aria-disabled custom control must suppress its own activation while
+preserving the expected focus and state semantics.
+
+### Runtime expectations
+
+The distributed JavaScript targets ES2020. Automated tests exercise DOM and
+adapter contracts in jsdom, and Playwright covers selected real-browser
+integration paths; the repository also includes a browser benchmark page. It
+does not certify every TV browser, webview, controller, or
+assistive-technology combination. For embedded and TV products, maintain a
+tested matrix of exact OS/browser versions, input mappings, CSS `@property`
+behavior, native `<dialog>` support, and target-device performance. The
+data-attribute configuration path avoids reliance on `@property` for
+non-inheritance.
+
+## Framework adapters
+
+The core is framework-agnostic; thin idiomatic bindings ship as subpath
+exports (React and Vue are optional peer dependencies; Svelte and the web
+components need nothing):
+
+| Import | What you get |
+| --- | --- |
+| `spatial-nav-css/react` | `<SpatialNavigationProvider>`, `useFocusable` → `{ref, focused}`, `<SpatialContainer>`, `useSpatialNavigation`, `useSpatialEvent` |
+| `spatial-nav-css/react-aria` | react-aria-components interop: `spatialFocusable()`, `spatialZone()`, `useSpatialFocused()` — helpers for coordinating tested roving-tabindex collection patterns; see framework caveats |
+| `spatial-nav-css/vue` | `SpatialNavigationPlugin`, `useFocusable` with a reactive focused ref, `v-focusable`, `v-spatial-container` directives |
+| `spatial-nav-css/svelte` | `use:focusable`, `use:spatialContainer` actions, `createSpatialNav` with a `focused` store (Svelte 3/4/5) |
+| `spatial-nav-css/elements` | `<spatial-nav>` + `<spatial-container>` declarative light-DOM wrappers, after explicit registration |
+| `spatial-nav-css/dialogs` | `spatialAlert()` / `spatialConfirm()` — asynchronous `<dialog>` helpers that work with a running navigation instance |
+| `spatial-nav-css/virtual` | `attachVirtualEdges()` — bridge navigation past a virtualized list's mounted window |
+| `spatial-nav-css/debug` | `attachDebugOverlay()` — paint approximate DOM boxes for focusables, containers, and the current spatial target |
+
+The React provider is safe to render during SSR: it supplies a no-op facade on
+the server and creates the live engine on the client. Navigation, focus, and
+activate methods return `false`; `getFocused()` returns `null`; lifecycle and
+adapter methods are no-ops; and `.engine` throws. `createSpatialNavigation()`
+uses the same facade when called without a DOM; direct `new SpatialEngine()`
+construction requires a DOM root.
+
+See [docs/frameworks.md](docs/frameworks.md) for full usage, including the
+Angular/Solid/anything-else pattern.
+
+## Documentation
+
+- [docs/guide.md](docs/guide.md) — getting started & core concepts
+- [docs/css-api.md](docs/css-api.md) — spatial CSS reference
+- [docs/js-api.md](docs/js-api.md) — JS/TS API reference
+- [docs/input-devices.md](docs/input-devices.md) — device matrix, Steam Input details, custom adapters (Steamworks, WebHID IR)
+- [docs/frameworks.md](docs/frameworks.md) — React, Vue, Svelte, Web Components
+- [docs/recipes.md](docs/recipes.md) — TV rails, launchers, modals, pagination, forms, virtualized lists
+- [docs/edge-cases.md](docs/edge-cases.md) — boundary behavior and runtime caveats
+- [docs/performance.md](docs/performance.md) — benchmark methodology, limits, and the CI-pinned style-read budget
+- [docs/virtualization.md](docs/virtualization.md) — TanStack Virtual (`spatial-nav-css/virtual` edge bridge) and React Aria Virtualizer, with headless contract tests and browser-testing caveats
+
+Using an AI assistant? [llms.txt](llms.txt) is a compact, LLM-oriented index
+of this library's API and docs, and [llms-full.txt](llms-full.txt) is the
+complete documentation in one file (both ship in the npm package; regenerate
+the latter with `npm run build:llms`). Agents working on this repository
+should start at [AGENTS.md](AGENTS.md).
+
+## The spatial CSS surface
+
+Element-level navigation configuration is declarative. Each knob exists both
+as a **CSS custom property**
+(participates in the cascade, media queries, themes) and a **data attribute**.
+Directional and container attributes replace the corresponding CSS value on
+the same element; the boolean default-focus forms opt in when either is set:
+
+| CSS custom property | Data attribute | Meaning |
+| --- | --- | --- |
+| `--nav-up/down/left/right: "<selector>" \| none` | `data-nav-up/down/left/right` | Explicit override for one direction (`none` blocks it). Echoes the experimental `nav-*` properties specified in [CSS Basic User Interface Level 4](https://www.w3.org/TR/css-ui-4/); historical implementation was limited and they are not interoperably available today. |
+| `--spatial-container: contain wrap remember` | `data-spatial-container="…"` | Marks a focus group. Tokens: `contain` prevents geometric directional exit (explicit overrides can escape), `wrap` wraps around edges, `remember` restores the last-focused child on re-entry. Bare value = plain group. `contain` does not trap Tab, pointer, or assistive-technology focus. |
+| `--spatial-default-focus: auto` | `data-spatial-autofocus` | Preferred entry element of a container (and of the page for `focusFirst()`). |
+
+```html
+<nav data-spatial-container="remember">…sidebar…</nav>
+
+<div class="carousel" data-spatial-container="wrap remember">
+  <button class="card" type="button">…</button>
+  …
+</div>
+
+<button data-nav-down="none">bottom of menu</button>
+```
+
+Or purely in CSS:
+
+```css
+.modal   { --spatial-container: contain; }
+.carousel { --spatial-container: wrap remember; }
+.carousel .card:first-child { --spatial-default-focus: auto; }
+```
+
+Theming variables for the focus outline live in
+[css/spatial.css](css/spatial.css) (`--spatial-focus-ring-color`, `-width`, and
+`-offset`). The base sheet deliberately leaves application shadows, radii,
+stacking, cursors, selection, and transitions alone. Add `.spatial-glow` for
+the optional glow or `.spatial-pop` for the optional Panorama-style scale-up.
+Reduced motion disables the pop; forced-colors mode uses the system highlight
+and disables the optional glow. An explicit `scrollBehavior: 'smooth'` option
+also degrades to `instant` under reduced motion; the default `auto` continues
+to follow application CSS.
+
+## Input devices
+
+Adapters translate physical input into four user actions (`direction` /
+`activate` / `release` / `back`) plus an `activationcancel` lifecycle intent
+that abandons a held press when its release can no longer be observed. Through
+the composed navigation path it produces `spatial:activatecancel` on the
+original press target when that target remains in the root. Two adapters ship
+in the box:
+
+| Device | How it's covered |
+| --- | --- |
+| Xbox, DualShock/DualSense, Switch Pro, and other controllers | `gamepadAdapter()` when the browser exposes a [standard Gamepad mapping](https://w3c.github.io/gamepad/#remapping). Availability and mapping vary by browser, OS, host, permissions, and hardware. |
+| Steam Input | `gamepadAdapter()` when [Steam Input](https://partner.steamgames.com/doc/features/steam_controller/steam_input_gamepad_emulation_bestpractices) is configured for gamepad/XInput emulation **and** the host browser exposes the virtual device through Gamepad API. Keyboard/mouse emulation and Steam Input API action sets need different integration. |
+| IR / TV remotes | `keyboardAdapter()` when the platform delivers remote buttons as keyboard events. Defaults include arrows/OK, [LG webOS Back](https://webostv.developer.lge.com/develop/guides/magic-remote) (`461`), and [Samsung Tizen Return](https://developer.samsung.com/smarttv/develop/guides/user-interaction/remote-control.html) (`10009`); test each target device and extend `keyCodeMap` as needed. |
+| Keyboard | `keyboardAdapter()` (arrows, Enter, Escape, and `BrowserBack`, plus documented legacy remote/back codes; configurable) |
+| Mouse / touch | no separate adapter when the interaction moves DOM focus onto a matching light-DOM stop; the engine adopts that `focusin` |
+
+```ts
+import { createSpatialNavigation, keyboardAdapter, gamepadAdapter } from 'spatial-nav-css'
+
+const nav = createSpatialNavigation({
+  adapters: [
+    keyboardAdapter({ keyCodeMap: { 10182: 'back' } }), // add a vendor key
+    gamepadAdapter({ deadzone: 0.4, repeatIntervalMs: 100 }),
+  ],
+})
+```
+
+### Writing an adapter (Steamworks, dedicated IR, custom hosts)
+
+```ts
+import type { InputAdapter } from 'spatial-nav-css'
+
+export function steamworksAdapter(steam: SteamworksClient): InputAdapter {
+  let stopPolling: (() => void) | undefined
+  return {
+    id: 'steamworks',
+    start(ctx) {
+      // Application pseudocode: poll an initialized action set and forward it.
+      let previous = { up: false, select: false }
+      let selectDownAt: number | null = null
+      const timer = ctx.window.setInterval(() => {
+        const current = steam.readMenuActions()
+        if (current.up && !previous.up) {
+          ctx.dispatch({ type: 'direction', direction: 'up', repeat: false, source: 'steamworks' })
+        }
+        if (current.select && !previous.select) {
+          selectDownAt = ctx.window.performance.now()
+          ctx.dispatch({ type: 'activate', source: 'steamworks' })
+        }
+        if (!current.select && previous.select && selectDownAt !== null) {
+          ctx.dispatch({
+            type: 'release',
+            durationMs: ctx.window.performance.now() - selectDownAt,
+            source: 'steamworks',
+          })
+          selectDownAt = null
+        }
+        previous = current
+      }, 16)
+      stopPolling = () => {
+        ctx.window.clearInterval(timer)
+        if (selectDownAt !== null) {
+          ctx.dispatch({ type: 'activationcancel', source: 'steamworks' })
+          selectDownAt = null
+        }
+      }
+    },
+    stop() { stopPolling?.(); stopPolling = undefined },
+  }
+}
+
+nav.addAdapter(steamworksAdapter(steam))
+```
+
+`SteamworksClient`, `readMenuActions()`, and the action result fields above
+are application-level pseudotypes, not exports from this library or claimed
+`steamworks.js` APIs. Follow the selected binding's current initialization,
+frame-pump, action-set, handle, and shutdown APIs. A production adapter should
+also define held-direction repeat, edge-detect activate/back, emit `release`
+with `durationMs` when long-press behavior is needed, emit
+`activationcancel` if a held press becomes unobservable, and clean up host
+resources in `stop()`. The same contract can wrap a permissioned raw IR
+receiver, MIDI input, or another host that can produce navigation intents.
+
+## Events
+
+All events bubble and are composed, so one listener on the owning `document`
+can observe them within that document. Their targets vary by event:
+
+| Event | Target | Cancelable | Fired when |
+| --- | --- | --- | --- |
+| `spatial:beforefocus` | would-be target | yes — vetoes the move | before focus moves to a target |
+| `spatial:focus` | new target | — | after focus moved (`detail: { direction, from, source }`) |
+| `spatial:nofocustarget` | origin | — | navigation hit the edge — hook to paginate / lazy-load |
+| `spatial:activate` | current spatial target | yes — suppresses the synthetic click | A button / Enter / OK pressed |
+| `spatial:activaterelease` | matching press target through adapters; explicit/current spatial target for a direct engine call | — | activate control released (`detail.durationMs` = hold time, for long-press) |
+| `spatial:activatecancel` | matching press target through adapters; explicit/current spatial target for a direct engine call | — | held activation ended without an observable release |
+| `spatial:back` | current spatial target or document | yes — `preventDefault()` = "handled" | B button / Escape / remote BACK |
+
+`spatial:activaterelease` is emitted only when the matching button-up remains
+observable. Built-in keyboard/gamepad lifecycle loss emits
+`spatial:activatecancel` on the original target when it is still connected
+inside the engine root. Navigation stop/destroy also clears any remaining
+pairings; a custom adapter must emit `activationcancel` from its own loss/stop
+path to make that cancellation observable. Handle the cancel event to clear
+transient pressed/hold UI; reserve release for completed hold UX.
+
+## Programmatic API
+
+```ts
+nav.navigate('down')      // move focus; true if it moved
+nav.focus('#search')      // focus element or selector
+nav.focusFirst()
+nav.getFocused()           // current spatial target (see note below)
+nav.activate()             // activates that target
+nav.addAdapter(adapter); nav.removeAdapter(adapter)
+nav.stop(); nav.destroy()
+nav.engine                // SpatialEngine for advanced use (findTarget, …)
+```
+
+`getFocused()` names the engine's current spatial target, not a strict alias
+for `document.activeElement`. A valid last target persists when DOM focus falls
+back to `<body>`/nothing, allowing direction or activation to resume there. It
+returns `null` when real focus moves to another control/region, or when the
+current target is disconnected, moved outside the root, disabled, or hidden.
+
+Low-level pure functions (`findBestCandidate`, `distanceScore`,
+`classifyDirection`, `wrapOrigin`, …) are exported for testing and for
+building your own engine on top.
+
+## How targets are chosen
+
+A simplified, predictable take on the `css-nav-1` distance function:
+
+```
+score = euclideanGap                       distance between closest edges
+      + spanOffset × 5                     off-axis travel actually needed
+      + centerOffset × 0.1                 mild "most in line" tie-break
+      + (aligned ? 0 : 1e6)                row/column grouping
+```
+
+`spanOffset` measures drift to the candidate's *span* on the orthogonal
+axis — zero when the origin sits laterally inside it — so wide zones (a
+scrolled carousel band) aren't penalized for their breadth.
+
+"Aligned" means the candidate overlaps the origin's projection on the axis
+orthogonal to travel — i.e. it's in the same row (for ←/→) or column (for
+↑/↓) — by at least 20% of the origin's extent (`alignedOverlapRatio`, so a
+1px graze doesn't count as "same row"). With the default finite `1e6`
+misalignment penalty, aligned candidates dominate ordinary viewport-scale
+layouts. That is a bias rather than an absolute guarantee: a sufficiently
+distant aligned candidate can lose, and applications can tune or remove the
+penalty through the `scoring` option.
+
+Search uses a **library-specific zone model inspired by css-nav-1**: it starts
+in the innermost explicitly marked spatial container and escalates outward
+through non-`contain` containers.
+At each level, sibling containers compete as single candidates — one rect per
+zone (a sidebar, a header, a carousel; a zone rect unions its own box with its
+mounted focusable descendants, including clipped ones). When a zone wins, the
+search descends into it.
+This is what keeps "right from the sidebar" landing in the content area
+instead of on whatever stray element is diagonally nearest. Entering a
+container honors its `remember` memory, then its declared default focus, then
+raw geometry.
+
+## Project layout
+
+```
+src/core/geometry.ts   pure candidate search & scoring (css-nav-1-inspired)
+src/core/config.ts     the spatial-CSS reader (custom props + data attrs)
+src/core/engine.ts     focus engine: zones, containers, memory, wrap, events
+src/core/dom.ts        focusability & visibility
+src/input/*            adapter contract, keyboard, gamepad, manager
+src/events.ts          spatial:* DOM events
+src/react/             React provider, hooks, components
+src/vue/               Vue plugin, composables, directives
+src/svelte/            Svelte actions + stores (no svelte dependency)
+src/elements/          <spatial-nav> / <spatial-container> custom elements
+css/spatial.css        focus ring, theming variables, @property registrations
+docs/                  guide, CSS & JS reference, devices, recipes, edge cases
+demo/                  demo gallery: quickstart, toolkit, media center, … (npm run demo)
+tests/                 vitest suite (239 tests: geometry, engine, config,
+                       inputs, adapters, virtualization, integration,
+                       weird-DOM/CSS edge cases, perf budgets)
+```
+
+## Project infrastructure
+
+The release tooling is sized for a single-package public repository:
+
+- **Lint + format**: [Biome](https://biomejs.dev) — one fast tool, enforced
+  in CI (`npm run lint`).
+- **Tests**: 239 automated unit/integration tests across 23 Vitest files
+  (jsdom, injectable geometry), with enforced V8 coverage thresholds
+  (`npm run test:coverage`).
+- **Package correctness**: `publint` and `@arethetypeswrong/cli` validate
+  the packed tarball's exports and types across multiple consumer-resolution
+  profiles in the configured CI quality job.
+- **CI**: GitHub Actions — Biome, typecheck, build, package checks, and the
+  configured test matrix on Node 22/24/26.
+- **SAST/SCA configuration**: CodeQL (`security-and-quality`, weekly +
+  per-PR), dependency review on PRs, and Dependabot for npm + Actions are
+  checked in. Repository-level prerequisites are tracked in
+  [RELEASE_CHECKLIST.md](https://github.com/SauceTaster/spatial-nav-css/blob/main/RELEASE_CHECKLIST.md).
+- **Dependency-script review metadata**: the root and `examples/`
+  `package.json` files record reviewed lifecycle-script packages in
+  `allowScripts`. After dependency changes, run
+  `npm approve-scripts --allow-scripts-pending` from each directory and review
+  any updates. Treat this field as review metadata, not an install-time
+  security boundary.
+- **Release preparation**: Changesets and an npm-provenance workflow are
+  checked in. Publishing remains conditional on the repository and npm setup,
+  initial package bootstrap, and verification in
+  [RELEASE_CHECKLIST.md](https://github.com/SauceTaster/spatial-nav-css/blob/main/RELEASE_CHECKLIST.md);
+  workflow files alone do not establish that a package has been published.
+- `npm run ci` runs lint, typecheck, build, SSR import checks, packed-package
+  checks, a React 17 consumer check, and coverage locally. The browser and
+  examples suites have separate local scripts and configured hosted jobs.
+  Other hosted-only work includes the Node matrix, CodeQL, dependency review,
+  and release preparation.
+
+## Notes & roadmap
+
+- **Pointer harmony**: in light DOM, pointer interaction that focuses a
+  matching stop updates spatial state through `focusin`; no pointer adapter is
+  needed for native controls that receive focus when activated. See the shadow
+  DOM caveat below for event retargeting across a shadow boundary.
+- **Shadow DOM**: engine-driven focus and `getFocused()` work for a root
+  element inside tested open-shadow-DOM layouts; navigation across shadow
+  boundaries and closed roots is not supported. Test pointer/Tab retargeting
+  in each target browser.
+- **Steamworks action sets**: a potential first-class host adapter is sketched
+  above and fits `InputAdapter`; a concrete integration would target and test
+  a specific maintained Steamworks binding.
+- **WebHID IR receivers**: same story — the adapter contract is the extension
+  point.
+
+MIT licensed.
+
+---
+
+<!-- source: docs/guide.md -->
+
+# Guide — getting started & core concepts
+
+## What this library does
+
+It makes “press right, focus moves to the thing on the right” work on the web.
+Its model is inspired by Valve's Panorama UI in Dota 2 and Counter-Strike, by
+familiar TV/console navigation, and by the **[W3C CSS Spatial Navigation Level
+1 Working Draft](https://www.w3.org/TR/css-nav-1/)**, last published in 2019 and
+not broadly implemented by browsers. This library is an independent engine,
+not a standards polyfill or a Panorama compatibility layer.
+
+Three pieces:
+
+1. **The engine** — given a focused element and a direction, picks the right
+   next element (geometry + container semantics), moves real DOM focus,
+   scrolls it into view, and emits events.
+2. **The spatial CSS surface** — containers, directional containment,
+   wrap-around, focus
+   memory, default focus, and per-direction overrides, declared with CSS
+   custom properties or data attributes. No JS wiring per element.
+3. **Input adapters** — keyboard, browser-exposed standard-mapping gamepads,
+   common TV/IR key events, and a contract for host-specific input.
+
+## Minimal setup
+
+The registry package has not yet been published. In the meantime, evaluate a
+reviewed repository clone with `npm ci` and `npm run build`; the imports
+below show the intended first-release package surface.
+
+```ts
+import { createSpatialNavigation } from 'spatial-nav-css'
+import 'spatial-nav-css/css'
+
+const nav = createSpatialNavigation({ autofocus: true })
+nav.start()
+```
+
+The default selector includes links, enabled form controls, the first summary
+in a details element, elements carrying `contenteditable` other than `false`,
+media elements with controls, iframes, and elements with a non-negative
+`tabindex`. Add `data-focusable` for an intentional spatial stop, or
+customize `focusableSelector` for a different policy. On first spatial focus,
+a non-native `data-focusable` element with no existing `tabindex` receives
+`tabindex="-1"`, which lets it receive programmatic focus without adding it to
+the Tab order.
+
+## Concepts
+
+### Focus is real focus
+
+Spatial moves use DOM focus: native `focus`/`blur` events fire and, for
+document-rooted light DOM, the moved-to element becomes
+`document.activeElement`. For a root inside open shadow DOM, use
+`nav.getFocused()` or that shadow root's `activeElement`; `nav.getFocused()`
+also resynchronizes an eligible active descendant if a retargeted event was
+missed. In light DOM, when pointer, Tab, or another library moves focus onto a
+matching stop, the engine adopts the move immediately through `focusin`.
+
+`nav.getFocused()` reports the current **spatial target**, which is usually the
+active DOM element but deliberately persists when DOM focus falls back to
+`<body>`/nothing. That lets a later direction or activate intent resume from
+the last valid stop. If real focus moves to a different or excluded control,
+the engine yields ownership and `getFocused()` returns null for that region.
+
+Real focus supports assistive-technology focus tracking, but it does not supply
+semantics. Prefer native controls for actions. Custom controls still need an
+appropriate accessible name, role, state, and keyboard behavior, and should be
+tested with the assistive technologies the application supports. The engine
+also toggles a `spatial-focused` class because gamepad-driven programmatic
+focus does not reliably match `:focus-visible`.
+
+### Containers are zones
+
+A **container** (`data-spatial-container`) is a focus group: a sidebar, a
+header, a carousel, a modal. Containers matter twice:
+
+- **Searching**: sibling containers compete as whole zones — one rect each —
+  and the search descends into the winning zone. This is what makes "right
+  from the sidebar" land in the content area instead of on whatever stray
+  element happens to be diagonally nearest.
+- **Entering**: a container can declare what gets focus when navigation
+  enters it — its `remember`ed last child, or a `data-spatial-autofocus`
+  child.
+
+Container tokens compose: `data-spatial-container="contain wrap remember"`.
+
+| token | effect |
+| --- | --- |
+| *(bare)* | plain group/zone |
+| `contain` | geometric directional search cannot leave; explicit overrides and programmatic focus can; Tab, pointer, and assistive-technology navigation are unaffected |
+| `wrap` | navigation wraps on a travel axis only when the container has candidates behind the current item on that axis |
+| `remember` | re-entering restores the last focused child |
+
+### The search, in order
+
+For a move from element E in direction D:
+
+1. **Explicit override** — `data-nav-D` / `--nav-D` on E: `none` blocks,
+   a selector jumps. Overrides skip everything below, including spatial
+   containment.
+2. **Scoped geometric search** — starting in E's innermost container:
+   elements directly in the scope plus nested containers-as-zones compete;
+   best candidate wins (see scoring in the README); zone winners are entered
+   via descent.
+3. **Wrap** — if the scope has `wrap` and there are candidates *behind* E on
+   this axis, wrap to the far side.
+4. **Escalate** — if the scope is not `contain`, move the search to the
+   parent scope and repeat.
+5. **Give up** — dispatch `spatial:nofocustarget` on E (hook this for
+   pagination / lazy loading).
+
+Entering a container redirects to its memory (`remember`), then its declared
+default focus, then the geometric pick.
+
+### Intents, not keys
+
+Adapters use five intent variants: the four user actions `direction`,
+`activate`, `release`, and `back`, plus lifecycle plumbing
+`activationcancel`. `activate` synthesizes a click on the current spatial
+target (cancel via `spatial:activate`); `release` reports the activate control's
+hold duration; `activationcancel` abandons a stored press when its release
+becomes unobservable and the composed path reports `spatial:activatecancel` on
+the original target when it remains connected inside the engine root; and
+`back` dispatches a cancelable `spatial:back` for the application to interpret
+(close a modal, go back a screen).
+
+## Where to next
+
+- [css-api.md](css-api.md) — spatial properties and attributes
+- [js-api.md](js-api.md) — JavaScript and TypeScript API
+- [input-devices.md](input-devices.md) — device support, custom adapters
+- [frameworks.md](frameworks.md) — React, Vue, Svelte, Web Components
+- [recipes.md](recipes.md) — concrete patterns (TV rows, modals, grids…)
+- [edge-cases.md](edge-cases.md) — behavior at the boundaries
+
+---
+
+<!-- source: docs/css-api.md -->
+
+# Spatial CSS reference
+
+Spatial configuration can be expressed in two forms that read as one config:
+
+- **CSS custom property** — participates in the cascade, media queries,
+  themes, and container queries. Read via `getComputedStyle` at navigation
+  time, so runtime CSS changes apply immediately.
+- **Data attribute** — a directional or container attribute replaces the
+  corresponding CSS value on the same element. `data-spatial-autofocus` is a
+  boolean opt-in, so default focus is enabled when either form opts in. Use
+  attributes in environments without `@property` support (see Inheritance
+  below).
+
+## Per-direction overrides
+
+| CSS | Attribute | Values |
+| --- | --- | --- |
+| `--nav-up` | `data-nav-up` | `"<selector>"` \| `none` |
+| `--nav-down` | `data-nav-down` | ⬆ same |
+| `--nav-left` | `data-nav-left` | ⬆ same |
+| `--nav-right` | `data-nav-right` | ⬆ same |
+
+- A **selector** jumps focus to its first match in the nav root. That first
+  match must be an eligible spatial target: it must match the configured
+  focusable selector, be enabled, and pass the visibility check. Otherwise the
+  move fails; later selector matches and geometry are not tried because an
+  override is authoritative.
+- **`none`** blocks the direction entirely.
+- An empty value or `auto` removes the explicit route and lets geometry run.
+- Overrides bypass container semantics: spatial containment, wrap, memory, and
+  default focus are all skipped. They are the escape hatch *and* the precision
+  tool.
+- These names deliberately echo the experimental `nav-up`/`nav-right`
+  properties currently specified in [CSS Basic User Interface Level
+  4](https://www.w3.org/TR/css-ui-4/).
+  Historical implementation was limited, and they are not interoperably
+  available in current browsers.
+
+```css
+.settings-row:last-child { --nav-down: none; }
+.search-input { --nav-left: "#sidebar-search"; }
+```
+
+## Containers
+
+| CSS | Attribute |
+| --- | --- |
+| `--spatial-container: <tokens>` | `data-spatial-container="<tokens>"` |
+
+Tokens (space-separated, any order): `contain`, `wrap`, `remember`. Any present
+`data-spatial-container` marks a group; a bare attribute or a value with no
+recognized tokens is therefore a plain group. In CSS, an empty value, `none`,
+or `normal` means “not a container”; any other token-less value marks a plain
+group. Unknown tokens are ignored.
+
+```css
+.modal    { --spatial-container: contain; }
+.carousel { --spatial-container: wrap remember; }
+```
+
+```html
+<div data-spatial-container="contain wrap remember">…</div>
+```
+
+Notes:
+
+- A configured `HTMLElement` engine root can itself carry
+  `data-spatial-container` or `--spatial-container` and participates as the
+  outermost container; root-level `wrap` and `remember` are honored. A
+  `Document` root is the implicit outer boundary and has no element config.
+- `contain` stops this library's directional search from leaving the
+  container. It does not contain Tab, pointer, or assistive-technology
+  navigation and is not, by itself, an accessible modal focus trap.
+- `wrap` only engages along the axis where the container has items behind
+  the focused element — pressing down in a horizontal row exits the row, it
+  does not wrap sideways.
+- Because of that, **`wrap` is only safe on a container whose layout is
+  guaranteed to stay single-axis**. A responsive
+  `grid-template-columns: repeat(auto-fit, …)` row that reflows to two rows at
+  a narrow viewport suddenly has items behind the focused one on the vertical
+  axis too, so "down" at the last row wraps back to the first instead of
+  leaving the container — containment the author never asked for, with no
+  `contain` token in sight. Pin the track count (`repeat(4, …)`) when you use
+  `wrap`, or drop the token and let geometry handle the edges.
+- `remember` memory is held in a WeakMap; if the remembered element is
+  removed or hidden, entry falls back to default focus, then geometry.
+- A zone rect unions the container's box with its mounted focusable
+  descendants. Focusables clipped outside a scroll box still contribute;
+  unmounted virtual items and non-focusable content do not.
+
+## Default focus
+
+| CSS | Attribute |
+| --- | --- |
+| `--spatial-default-focus: auto` | `data-spatial-autofocus` |
+
+Marks the preferred entry element of its container, and of the page for
+`focusFirst()` / the `autofocus` option. With `remember`, memory wins over
+default focus once the container has been visited.
+
+## Focusability
+
+The default focusability policy includes:
+
+```
+a[href]; enabled button, non-hidden input, select, and textarea;
+details > summary:first-of-type;
+an element with contenteditable other than false;
+audio[controls]; video[controls]; iframe;
+elements with a non-negative tabindex;
+[data-focusable]
+```
+
+This selector covers common native controls, not every element a browser can
+focus. `data-focusable` creates an intentional spatial stop. If a non-native
+opt-in has no `tabindex`, the engine assigns `tabindex="-1"` on first focus so
+it can hold DOM focus without automatically joining the Tab order. Under the
+default policy, a negative `tabindex` removes other elements as stops; adding
+`data-focusable` opts an element back in deliberately. Override the policy with
+the `focusableSelector` option for an application-specific composite-widget
+model.
+
+Focusability is not semantics. Prefer native controls for actions. A custom
+focusable still needs an appropriate accessible name, role, state, and keyboard
+behavior, and should be tested with assistive technology.
+
+An element is skipped when it (or an ancestor) is `[hidden]`, `[inert]`, or
+`[aria-hidden="true"]`, or when an open native modal (`dialog:modal`) does not
+contain it. **This semantic policy is enforced unconditionally**, because it is
+what keeps focus inside a modal: portaled overlay libraries (Radix, MUI,
+Headless UI, Ark) all contain focus by `aria-hidden`-ing the rest of the page
+rather than using a native `<dialog>`.
+
+Separately, the element must be *rendered*. Where supported,
+`checkVisibility({ checkVisibilityCSS: true, visibilityProperty: true })` tests
+for an associated rendered box and respects CSS visibility (both option
+spellings are sent: the newer name only landed in Chromium 121 / Firefox 122).
+The fallback rejects elements with no client rects, as well as
+`visibility: hidden|collapse`. Elements clipped by `overflow` are **not**
+skipped — being scrolled out of view is a position, not an absence.
+
+`visibilityFilter` replaces **only** the rendering half; the semantic policy
+still applies on top, so a custom filter cannot accidentally expose the page
+behind an open dialog. Both halves are exported for direct use as
+`isSemanticallyNavigable(el)` and `isRendered(el)`, with `isElementVisible(el)`
+as their conjunction.
+
+Note that the `aria-hidden` check is a defensive engine policy: `aria-hidden`
+does **not** disable native focus or pointer interaction and must not be used
+on a focusable element or an ancestor of one in your own markup. Prefer
+`inert`, `hidden`, disabling, or removal when content is unavailable.
+
+Likewise, `aria-disabled="true"` exposes an accessibility state but does not
+disable native focus or click behavior, and the engine does not exclude it the
+way it excludes native `:disabled`. An aria-disabled custom control must
+suppress activation itself while preserving the expected focus and state
+semantics.
+
+## Theming (from css/spatial.css)
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `--spatial-focus-ring-color` | `#1a9fff` | ring color |
+| `--spatial-focus-ring-glow` | `rgba(26,159,255,.45)` | outer glow |
+| `--spatial-focus-ring-width` | `3px` | ring width |
+| `--spatial-focus-ring-offset` | `2px` | ring offset |
+| `--spatial-focus-ring-radius` | `6px` | bundled dialog radius; the base focus outline does not replace application radii |
+| `--spatial-scroll-margin` | `24px` | breathing room when scrolled into view |
+
+Classes: the engine toggles **`.spatial-focused`** on the current element and
+mirrors it with a **`[data-spatial-focused]`** attribute. The bundled sheet
+styles both, and **application CSS should prefer the attribute**: a framework
+that renders `className` / `:class` / `class:` rewrites the class attribute on
+its next render, which drops the class — including on the very render that
+focus state triggers. Nothing renders the data attribute, so it survives
+reconciliation. `focusClass` renames only the class; the attribute is fixed.
+When you replace the class, mirror the replacement-class styles in
+application CSS (the bundled sheet's ring, glow, and pop select
+`.spatial-focused` and `[data-spatial-focused]`). Opt into the glow with
+**`.spatial-glow`** or the Panorama-style scale-pop with **`.spatial-pop`**.
+When styling a **third-party component**, key off `[data-spatial-focused]` and
+expect the ring to land on whatever element actually receives focus — for a
+Material UI `Switch` or `Checkbox` that is the visually hidden `<input>` laid
+over the control, not the control itself. Hoist it with `:has()`:
+
+```css
+.MuiButtonBase-root:has(> [data-spatial-focused]) { outline: 2px solid …; }
+```
+
+Component libraries also paint their own focus styling from `:focus-visible`
+(`.Mui-focusVisible` and friends), which controller-driven programmatic focus
+does not set — so the engine's indication is the one to rely on there.
+
+The base sheet does not replace application box shadows, radii, stacking,
+cursors, text selection, or transitions. Reduced motion disables the pop;
+forced-colors mode uses the system highlight and disables the optional glow.
+
+## Testing the cascade
+
+The CSS surface is covered at three levels:
+
+- `tests/weird-css.test.ts` — real stylesheets in jsdom: quoted/unquoted
+  values, hostile tokens, precedence, pure-CSS containers (contain/wrap/
+  remember from a class alone), runtime cascade changes, the no-@property
+  degradation path.
+- `tests/spatial-css.test.ts` — structural contracts on the shipped
+  stylesheet (`@property` registrations, the focus outline and
+  reduced-motion blocks, nonintrusive pointer/selection behavior, and
+  theming-variable defaults).
+- `demo/css-conformance.html` — a self-running real-browser integration page,
+  also loaded by the Playwright smoke suite, for what jsdom can't evaluate:
+  `@property inherits: false` actually stopping
+  container inheritance, `@media`-scoped config, `var()` substitution in
+  computed custom properties, and the painted focus ring. Results land in
+  `window.__cssConformance`. Run the browser suite after touching the config
+  reader or stylesheet.
+
+## Inheritance (important)
+
+Custom properties inherit by default. The stylesheet registers all
+engine-read properties with `@property … inherits: false`, so
+`--spatial-container` on an element does not turn every descendant into a
+container. If you target browsers without `@property` **and** configure via
+CSS, either scope values carefully (`> *  { --spatial-container: initial }`)
+or use the data-attribute forms, which never inherit.
+
+---
+
+<!-- source: docs/js-api.md -->
+
+# JavaScript / TypeScript API reference
+
+Package entry points:
+
+| Import | Contents |
+| --- | --- |
+| `spatial-nav-css` | core engine, input adapters, events, geometry |
+| `spatial-nav-css/react` | React provider, hooks, components |
+| `spatial-nav-css/react-aria` | react-aria-components interop: `spatialFocusable()`, `spatialZone()`, `useSpatialFocused()` |
+| `spatial-nav-css/vue` | Vue plugin, composables, directives |
+| `spatial-nav-css/svelte` | Svelte actions and stores |
+| `spatial-nav-css/elements` | `<spatial-nav>` / `<spatial-container>` custom elements |
+| `spatial-nav-css/virtual` | `attachVirtualEdges()` — virtualized-list edge bridge ([virtualization.md](virtualization.md)) |
+| `spatial-nav-css/dialogs` | `spatialAlert()` / `spatialConfirm()` — asynchronous `<dialog>` helpers for a running navigation instance |
+| `spatial-nav-css/debug` | `attachDebugOverlay()` — paints approximate DOM boxes for focusables, containers, and focus |
+| `spatial-nav-css/css` | the stylesheet |
+
+## createSpatialNavigation(options?)
+
+Wires an engine to input adapters and returns a `SpatialNavigation`. In a DOM
+environment, an omitted `root` uses `document`. During server rendering with no
+explicit DOM root, the factory returns a deterministic no-op facade:
+`navigate`, `focus`, `focusFirst`, and `activate` return `false`;
+`getFocused()` returns `null`; lifecycle and adapter methods do nothing; and
+accessing `.engine` throws. A separate client render creates the live engine.
+Direct `new SpatialEngine()` construction requires a DOM root.
+
+```ts
+interface SpatialNavigationOptions {
+  root?: Document | HTMLElement      // subtree to operate on (default document);
+                                     // a marked HTMLElement root is also the
+                                     // outermost spatial container
+  focusableSelector?: string         // replaces the default selector
+  scoring?: Partial<ScoringOptions>  // { orthogonalWeight: 5, centerWeight: 0.1,
+                                     //   alignedOverlapRatio: 0.2, misalignedPenalty: 1e6 }
+  getRect?: (el: HTMLElement) => NavRect   // rect provider (tests, virtual layouts)
+  visibilityFilter?: (el: HTMLElement) => boolean
+  scrollBehavior?: ScrollBehavior | false  // default 'auto'; explicit smooth becomes
+                                           // instant under reduced motion
+  focusClass?: string                // default 'spatial-focused'; one non-empty
+                                     // DOM class token; custom CSS is required
+  autoRestoreFocus?: boolean         // default true: when the focused element is
+                                     // removed *or disabled*, restore (debounced
+                                     // ~100ms) to the surviving container's memory →
+                                     // default focus → first focusable → root entry.
+                                     // Needs start().
+  adapters?: InputAdapter[]          // default [keyboardAdapter(), gamepadAdapter()]
+  autofocus?: boolean                // focus default/first element on start()
+  window?: Window                    // window for adapters (iframes, tests)
+}
+
+interface SpatialNavigation {
+  start(): void                      // begin tracking focus + listening to devices
+  stop(): void                       // detach everything; focus state kept
+  destroy(): void                    // stop and clear adapters/engine-managed state
+  navigate(direction: Direction): boolean
+  focus(target: HTMLElement | string): boolean
+  focusFirst(): boolean
+  claimFocus(target?: HTMLElement | string): boolean  // focus only if unclaimed
+  getFocused(): HTMLElement | null   // current spatial target; may persist when
+                                     // DOM focus falls back to body
+  activate(): boolean                // activate that target; click unless vetoed
+  addAdapter(adapter: InputAdapter): void
+  removeAdapter(adapter: InputAdapter): void
+  readonly engine: SpatialEngine
+}
+```
+
+Construction rejects an invalid `focusableSelector` or `focusClass` (which
+must be one non-empty DOM class token). Each resolved scoring value must be
+finite and non-negative, and `alignedOverlapRatio` must also be at most 1.
+`scrollBehavior` accepts only `false`, `'auto'`, `'instant'`, or `'smooth'`;
+invalid values throw rather than entering the input path.
+
+Behavioral notes:
+
+- `getFocused()` is the current spatial target, not a strict alias for
+  `document.activeElement`. A valid last target persists when DOM focus falls
+  to body/nothing so direction or activation can resume there; real focus on a
+  different/excluded control makes that region report `null`.
+- A `direction` intent with no current spatial target **claims** focus
+  (`focusFirst`) only if no element anywhere on the page holds real focus, so
+  multiple nav regions don't steal from each other.
+- Once the engine owns or successfully claims focus, direction input is
+  consumed even at an edge so arrows/sticks do not scroll the page underneath
+  that UI. React to edges via `spatial:nofocustarget`. An inactive region does
+  not consume another region's input.
+- `focus(target)` is an explicit programmatic escape: a connected, visible,
+  non-disabled element inside the root can be focused even when it does not
+  match `focusableSelector`. The engine supplies `tabindex="-1"` when needed;
+  callers remain responsible for targeting a semantic, intentional control.
+- `claimFocus(target?)` applies that same "only if unclaimed" rule to a
+  programmatic move: it focuses `target` (or the default/first focusable) only
+  while nothing spatial is focused *and* the document's active element is
+  still the body. It reports `source: 'claim'` on `spatial:focus`, and returns
+  `false` without changing anything otherwise. Use it for content that arrives
+  asynchronously — `autofocus` runs once at `start()`, when a data-driven
+  screen is still skeletons, so the interesting content never receives focus.
+  See [recipes.md](recipes.md) for the pattern.
+
+## SpatialEngine
+
+The low-level engine manages DOM focus, geometry, containers, and events but
+does not own an `InputManager` or expose adapter add/remove methods. Its core
+operations and engine-only methods are:
+
+```ts
+new SpatialEngine(options /* EngineOptions = the non-input subset above */)
+engine.findTarget(dir, from)   // resolve a move without performing it
+engine.navigate(dir, source?)  // move focus
+engine.focus(elOrSelector, { direction?, from?, source? })
+engine.focusFirst(detail?)
+engine.activate(source?)
+engine.activateRelease(durationMs, source?, target?)
+engine.activateCancel(source?, target?)
+engine.back(source?)           // dispatch spatial:back; true if a listener handled it
+engine.getFocused()
+engine.start() / stop() / destroy()
+```
+
+When calling `activateRelease()` directly, `target` defaults to the current
+spatial target. The composed factory passes the element that received the
+matching press; a disconnected target or one outside the engine root produces
+no release event and returns `false`.
+
+`activateCancel()` has the same direct-target default and validity checks. It
+dispatches `spatial:activatecancel` without a duration to say that a matched
+press ended without a normal release.
+
+## Events
+
+All `CustomEvent<SpatialEventDetail>`, bubbling and composed.
+`detail = { direction, from, source, repeat }` where `source` is an extensible string:
+an adapter id (`'keyboard'`, `'gamepad'`, a custom id), `'api'`, or an engine
+lifecycle source such as `'autofocus'`, `'claim'`, or `'restore'`. `repeat` is
+`true` when the move came from a *held* control rather than a discrete press —
+only the input adapter knows that, and accelerated list scrolling ("hold to
+speed up, then jump by section") needs it. It is `false` for discrete and
+programmatic moves; `navigate(direction, repeat?)` lets a caller set it.
+
+| Type | Target | Cancelable | Meaning / default action |
+| --- | --- | --- | --- |
+| `spatial:beforefocus` | the would-be target | yes — vetoes the move | focus is about to move here |
+| `spatial:focus` | the new target | no | focus moved |
+| `spatial:nofocustarget` | the origin | no | navigation found nothing (edge) |
+| `spatial:activate` | current spatial target | yes — suppresses the click | activate intent; the built-in adapters edge-detect physical presses |
+| `spatial:activaterelease` | matching press target in the composed input path; explicit or current spatial target for a direct engine call | no | activate control released; `detail.durationMs` is the hold time — long-press UX lives here |
+| `spatial:activatecancel` | matching press target in the composed input path; explicit or current spatial target for a direct engine call | no | matched activation ended without an observable release; clear transient pressed/hold UI |
+| `spatial:back` | current spatial target or document | yes — marks handled | back intent |
+
+## Input adapters
+
+```ts
+type NavIntent =
+  | { type: 'direction'; direction: Direction; repeat: boolean; source: string; originalEvent?: Event }
+  | { type: 'activate'; source: string; activationId?: string; originalEvent?: Event }
+  | { type: 'release'; durationMs: number; source: string; activationId?: string; originalEvent?: Event }
+  | { type: 'activationcancel'; source: string; activationId?: string; originalEvent?: Event }
+  | { type: 'back'; source: string; originalEvent?: Event }
+
+interface InputAdapter {
+  readonly id: string
+  start(context: AdapterContext): void   // context.dispatch(intent) => consumed?
+  stop(): void
+}
+
+interface AdapterContext {
+  readonly window: Window
+  dispatch(intent: NavIntent): boolean   // true when the engine consumed it
+}
+```
+
+### keyboardAdapter(options?)
+
+```ts
+keyboardAdapter({
+  keymap,        // Record<KeyboardEvent.key, Direction | 'activate' | 'back'> — replaces
+                 // the key table; a miss can still fall back to keyCodeMap
+  keyCodeMap,    // Record<keyCode, action> — merged over legacy defaults
+                 // (8, 13, 27, 37–40, 461, 10009)
+  ignoreEditable,// default true: leave mapped keys in editable controls alone
+  ignoreModified,// default true: leave Shift/Alt/Ctrl/Meta chords alone
+  throttleMs,    // default 0 (off): min ms between direction intents — time-based,
+                 // because TV platforms fire held-key repeats without event.repeat;
+                 // keyup resets the gate so a fresh press is never delayed
+})
+```
+
+Action lookup checks `keymap[event.key]` first and then
+`keyCodeMap[event.keyCode]`. Because `keyCodeMap` is merged over its legacy
+defaults, replacing `keymap` alone does not necessarily disable the default
+numeric mapping for the same physical key. The default key table includes
+arrows, Enter, Escape, and `BrowserBack`; legacy key codes also cover 8, 13,
+27, 37–40, 461, and 10009 outside editable controls.
+
+For an initially consumed activate/back press, the built-in adapters dispatch
+at most once per observed physical press. Keyboard press identity is held until
+keyup or window blur, so consumed held-key floods are deduplicated even when a
+remote fails to set `KeyboardEvent.repeat`; browser defaults on duplicates are
+also prevented. An unhandled initial back press is not recorded as owned: true
+`event.repeat` keydowns are still skipped, but a platform's malformed
+repeat-false flood can dispatch back again. For a consumed activate whose
+release remains observable, `spatial:activaterelease` carries the hold
+duration. The composed input path pairs it with the original press target even
+when application code moves focus during the hold. If that target leaves the
+engine root, or input ownership is lost through window blur, gamepad
+disconnect, adapter stop, or navigation teardown before button-up is observed,
+no release event is emitted.
+Use release for hold UX, not essential cleanup. Adapters that allow concurrent
+activate holds under one `source` should put the same unique `activationId` on
+each press/release pair; the built-in keyboard and gamepad adapters do this.
+When a matching release becomes unobservable, dispatch `activationcancel`
+with that same identity. For a live stored pairing, the composed path removes
+it and dispatches `spatial:activatecancel` on the original press target. The
+built-in adapters use it for lifecycle loss; if the target has already left
+the root, the pairing is still removed but no target event can be delivered.
+
+### gamepadAdapter(options?)
+
+```ts
+gamepadAdapter({
+  deadzone,             // default 0.5
+  initialRepeatDelayMs, // default 400
+  repeatIntervalMs,     // default 130
+  buttonMap,            // Record<buttonIndex, 'activate' | 'back'> — merged over { 0: activate, 1: back }
+})
+```
+
+After an initial probe, polling continues with `requestAnimationFrame` only
+while the browser exposes a connected pad. For the Gamepad API's standard
+mapping, d-pad buttons 12–15 and axes 0/1 produce directions and face buttons
+are edge-detected. Browser/platform permissions and the user-interaction gate
+can delay exposure. Devices with `gamepad.mapping !== 'standard'` may need a
+custom adapter; `buttonMap` remaps face-button actions but not axes or d-pad
+layout. Steam Input works through this adapter only when configured for
+gamepad/XInput emulation and exposed by the host browser as a standard mapping.
+
+### InputManager
+
+`new InputManager(handler, window?)` — owns adapters and routes intents.
+`add / remove / start / stop / destroy`. Used internally by
+`createSpatialNavigation`; public for custom hosts. Its omitted-window default
+reads the browser global, so pass an explicit `Window` for iframe/test realms
+and do not construct it directly in a DOM-free server render.
+
+## Geometry (pure functions)
+
+Exported for tests, debugging, and building other engines:
+
+```ts
+findBestCandidate(origin, candidates, dir, scoring?)  // the core chooser
+distanceScore(origin, candidate, dir, scoring?)       // lower = better
+classifyDirection(origin, candidate, dir)             // 'beyond' | 'overlapping' | null
+projectedOverlap(a, b, axis)                          // 1-D overlap length
+unionRects(rects)                                     // bounding union
+wrapOrigin(extent, from, dir)                         // virtual origin for wrap
+toNavRect(domRect), rectCenter(rect), OPPOSITE, DIRECTIONS
+```
+
+## Dialogs (`spatial-nav-css/dialogs`)
+
+Asynchronous, styleable alternatives to native blocking dialogs.
+
+```ts
+await spatialAlert(message, options?)        // Promise<void>
+await spatialConfirm(message, options?)      // Promise<boolean> — true on OK
+
+interface SpatialAlertOptions {
+  title?: string          // optional heading
+  okLabel?: string        // default 'OK'
+  className?: string       // extra class alongside .spatial-dialog
+  document?: Document      // explicit document; otherwise mount.ownerDocument,
+                           // then the global document
+  mount?: HTMLElement      // append target; default document.body
+}
+interface SpatialConfirmOptions extends SpatialAlertOptions {
+  cancelLabel?: string    // default 'Cancel'
+  defaultButton?: 'ok' | 'cancel'  // which opens focused; default 'ok'. Use
+                                   // 'cancel' for destructive confirmations so a
+                                   // held activate press cannot carry into OK.
+}
+```
+
+Why these exist: while displayed, `window.alert()`/`confirm()` typically pause
+the page event loop, including Gamepad API polling; browser chrome is also not
+application-styleable and controller dismissal is not portable. These helpers
+render a real `<dialog>` via `showModal()`. With a running navigation instance
+whose root contains the appended dialog (normally a document-rooted instance),
+the engine recognizes the native modal and `B` / `Escape` / remote-back can
+resolve as cancel through `spatial:back`. Messages are set with `textContent`,
+never HTML. Generated dialogs receive `dialog`/`alertdialog` semantics and an
+accessible name; when a title is supplied, the message is also associated as
+the description. On dismissal the helper attempts to refocus the previously
+focused element when it remains connected, but applications should verify or
+provide a fallback when focus restoration is critical. Pass `mount` when a
+navigation instance is scoped to an element; the mount must belong to the
+selected or inferred document and already be connected.
+
+The dialog entry point is safe to import during SSR, but calling either helper
+still requires an explicit/inferred DOM document and throws when none exists.
+
+Where `showModal()` is unavailable, the helper falls back to the `open`
+attribute plus `data-spatial-container="contain"`. That fallback contains only
+this library's directional search; it is not equivalent to native modal focus,
+Tab containment, outside-content inertness, or an accessible modal-dialog
+polyfill. Style via the `.spatial-dialog*` classes in
+[css/spatial.css](../css/spatial.css), and include dialog behavior in keyboard
+and assistive-technology testing for the application's supported browsers.
+
+> The gamepad adapter also guards long event-loop suspension, including a
+> blocking native simple dialog: on resuming from a >1s stall, a still-held
+> stick/d-pad restarts its
+> repeat timer instead of firing an instant phantom repeat.
+
+## Debug overlay (`spatial-nav-css/debug`)
+
+Inspect an approximate DOM overlay: it outlines selected focusables (cyan),
+each container's own box (dashed orange, labeled with its tokens), and the
+current spatial target (red), repainting on focus/scroll/resize. It does not
+draw the engine's unioned zone scoring rects or reproduce an injected engine
+`getRect` or custom `visibilityFilter`; pass the configured selector explicitly
+and interpret the result as a diagnostic aid. It is intended for development
+and is not automatically stripped from production bundles.
+
+```ts
+import { attachDebugOverlay } from 'spatial-nav-css/debug'
+
+const overlay = attachDebugOverlay(nav, {
+  focusableSelector,  // pass your engine's custom selector if you set one
+  labels: true,       // index / token labels
+  assumeVisible: false,
+})
+overlay.refresh()     // repaint after a programmatic layout change
+overlay.detach()      // remove everything
+```
+
+## Config readers
+
+```ts
+readNavConfig(el)        // parsed ElementNavConfig (CSS custom props + data attrs)
+findContainer(el, root)  // nearest container ancestor or null
+containerChain(el, root) // innermost → outermost
+getFocusables(scope, selector?, visibilityFilter?)
+isElementVisible(el)
+isEditable(el)
+DEFAULT_FOCUSABLE_SELECTOR
+```
+
+---
+
+<!-- source: docs/frameworks.md -->
+
+# Framework adapters
+
+The core is framework-agnostic — it reads the DOM your framework renders.
+The adapters below add idiomatic sugar: lifecycle management, reactive focus
+state, and declarative containers. If your framework is not listed, render the
+same native controls and `data-*` configuration, then manage one core instance
+at the application's client-side mount boundary.
+
+React and Vue are optional peer dependencies; the Svelte adapter and the web
+components import nothing framework-specific.
+
+**Styling focus in a framework.** The engine marks the focused element with
+both a `.spatial-focused` class and a `[data-spatial-focused]` attribute.
+Select the **attribute** in your own CSS. A framework that renders
+`className` / `:class` / `class:` rewrites the whole class attribute on its
+next render — including the render that focus state itself triggers — which
+drops the engine's class. Nothing renders the data attribute, so it survives.
+Deriving your own class from the adapter's `focused` flag is fine and
+composes with it:
+
+```tsx
+const { ref, focused } = useFocusable<HTMLButtonElement>()
+return <button ref={ref} className={focused ? 'card is-focused' : 'card'} />
+```
+
+```css
+.card[data-spatial-focused] { outline: 2px solid var(--ring); }
+```
+
+## React — `spatial-nav-css/react`
+
+```tsx
+import { SpatialNavigationProvider, SpatialContainer, useFocusable } from 'spatial-nav-css/react'
+import 'spatial-nav-css/css'
+
+function Root() {
+  return (
+    <SpatialNavigationProvider autofocus>
+      <Home />
+    </SpatialNavigationProvider>
+  )
+}
+
+function Home() {
+  return (
+    <SpatialContainer as="nav" remember>
+      <MenuItem label="Store" autofocus />
+      <MenuItem label="Library" />
+    </SpatialContainer>
+  )
+}
+
+function MenuItem({ label, autofocus }: { label: string; autofocus?: boolean }) {
+  const { ref, focused } = useFocusable<HTMLButtonElement>({ autofocus })
+  return (
+    <button ref={ref} className={focused ? 'item focused' : 'item'} onClick={() => navigateTo(label)}>
+      {label}
+    </button>
+  )
+}
+```
+
+- `SpatialNavigationProvider` — accepts every `SpatialNavigationOptions`
+  prop and captures options once. It supplies the server facade during SSR;
+  the browser render creates the live nav, starts it on client mount, and stops
+  it during effect cleanup. Cleanup keeps adapter registrations available for
+  React Strict Mode's development replay while separately resetting the
+  engine's listeners, observers, focus class, and engine-added `tabindex`
+  state.
+- `useSpatialNavigation()` — the nav instance from context.
+- `useFocusable(options)` → `{ ref, focused }` — marks the element
+  `data-focusable`, applies `autofocus` / `navUp..navRight` overrides, and
+  tracks focus via native focus/blur (spatial focus is real DOM focus).
+  `onFocus` and `onActivate` observe the corresponding custom spatial events,
+  not every native focus/click; they always see the latest closure.
+  `ref` is a callback ref that also exposes `.current`, so an element behind
+  a conditional — or a swapped target — is wired when it actually appears,
+  and unwired when it leaves. The hook only removes `data-*` attributes it
+  set itself: a `data-nav-*` or `data-spatial-autofocus` written directly in
+  your JSX survives, and is restored if you withdraw the matching option.
+- `SpatialContainer` — renders `data-spatial-container` from boolean props
+  `contain` / `wrap` / `remember`; `as` picks the tag. `contain` affects
+  directional navigation only and is not a Tab or modal focus trap.
+- `useSpatialEvent(type, handler, target?)` — subscribe to any `spatial:*`
+  event for the component's lifetime (e.g. `spatial:nofocustarget` for
+  pagination).
+
+For native controls, put the action in the native click handler as above. The
+engine's uncanceled activate path calls `.click()`, so pointer, keyboard Space,
+and spatial activation then share one action path. If an `onActivate` callback
+performs the action itself, it should call `event.preventDefault()` to suppress
+the subsequent synthetic click and still provide an equivalent native click
+path.
+
+SSR: importing the bindings and rendering `SpatialNavigationProvider` on the
+server is safe. During server rendering it supplies a no-op navigation facade
+and renders its children without constructing a DOM engine. Navigation, focus,
+and activate methods return `false`; `getFocused()` returns `null`; lifecycle
+and adapter methods are no-ops; and accessing `.engine` server-side throws a
+clear error because no engine exists. A distinct client render/hydration
+creates and starts the live instance. Code that needs the real engine must
+therefore run after client mount. Lists that reorder need no registration
+updates because geometry is read at navigation time.
+
+## React Aria Components — `spatial-nav-css/react-aria`
+
+For the tested keyboard-driven, single-orientation collection pattern,
+react-aria-components and spatial navigation divide the work as follows. The
+repository includes a headless contract test with injected geometry
+([tests/react-aria.test.ts](https://github.com/SauceTaster/spatial-nav-css/blob/main/tests/react-aria.test.ts));
+also test the actual RAC version and browser used by the application.
+
+- **Roving-tabindex RAC collections can be single spatial stops.** The engine
+  sees the collection's current tabbable item rather than registering every
+  item as an independent spatial target; entering one lands on RAC's current
+  item, and the engine adopts RAC's internal moves via `focusin`.
+- **Division of keyboard-arrow handling in the tested pattern.** RAC owns DOM
+  keyboard arrows along its orientation (`preventDefault`, including at the
+  edges); the keyboard adapter skips consumed events. Spatial navigation
+  drives the orthogonal keyboard axis—a vertical ListBox is exited
+  left/right—and everything outside.
+- **Semantic direction adapters do not enter RAC's key handling.** Gamepad and
+  custom host adapters dispatch direction intents straight to the spatial
+  engine. They see the roving collection as its one current stop and do not
+  move through RAC items. Controller traversal inside the collection needs an
+  application bridge to the collection's supported APIs, or independently
+  focusable spatial items instead of the roving-stop pattern.
+- **Spatial focus is real focus**, so RAC receives native focus transitions
+  when the engine moves. Whether selection follows focus depends on the RAC
+  component and its selection options.
+
+```tsx
+import {
+  Button, Dialog, DialogTrigger, Heading, ListBox, Modal,
+} from 'react-aria-components'
+import {
+  SpatialNavigationProvider, spatialFocusable, spatialZone, useSpatialFocused,
+} from 'spatial-nav-css/react-aria'
+
+<SpatialNavigationProvider autofocus>
+  <nav {...spatialZone('remember')}>
+    <ListBox aria-label="Library">…</ListBox>   {/* one spatial stop, RAC inside */}
+  </nav>
+  <button {...spatialFocusable({ autofocus: true })} onClick={openTile}>
+    Custom tile
+  </button>
+  <DialogTrigger>
+    <Button>Open settings</Button>
+    <Modal {...spatialZone('contain')}>         {/* contain directional nav too */}
+      <Dialog>
+        <Heading slot="title">Settings</Heading>
+        <Button slot="close">Done</Button>
+      </Dialog>
+    </Modal>
+  </DialogTrigger>
+</SpatialNavigationProvider>
+```
+
+- `spatialFocusable(opts)` / `spatialZone(tokens)` — DOM props to spread on
+  native elements or RAC components that forward the supplied `data-*`
+  attributes to their DOM element.
+- `useSpatialFocused()` → `{ ref, focused }` — focus-within state straight
+  from DOM events, for styling under **gamepad** input. Do not assume a
+  controller-driven programmatic move will set React Aria's
+  `data-focus-visible`; style via this hook or the engine's
+  `[data-spatial-focused]` attribute when deterministic controller focus
+  indication is required, and verify behavior with the RAC version in use.
+- The module re-exports the `/react` provider and hooks, so one import
+  serves a RAC app.
+
+RAC components configured for grid-like keyboard navigation may consume all
+four arrow keys, leaving no orthogonal keyboard axis for the spatial engine.
+Verify the exact component/version; single-orientation collections (or native
+controls arranged as independent spatial stops) have the clearest division of
+responsibility.
+
+## Vue 3 — `spatial-nav-css/vue`
+
+```ts
+// main.ts
+import { SpatialNavigationPlugin } from 'spatial-nav-css/vue'
+import 'spatial-nav-css/css'
+app.use(SpatialNavigationPlugin, { autofocus: true })
+```
+
+```vue
+<script setup lang="ts">
+import { useFocusable } from 'spatial-nav-css/vue'
+const { elRef, focused } = useFocusable()
+</script>
+
+<template>
+  <section v-spatial-container="'wrap remember'">
+    <button ref="elRef" :class="{ focused }" @click="open">Card</button>
+    <button v-focusable>Plain focusable</button>
+  </section>
+</template>
+```
+
+- `SpatialNavigationPlugin` — creates/starts the nav, provides it
+  (`useSpatialNavigation()`), registers both directives, destroys the nav on
+  `app.unmount()`.
+- `useFocusable(options)` → `{ elRef, focused }` with `focused` as a
+  reactive `Ref<boolean>`. Its optional callbacks observe custom
+  `spatial:focus` / `spatial:activate` events; keep ordinary actions on native
+  click handlers unless intentionally intercepting the spatial event. The
+  composable watches `elRef`, so an element behind `v-if` is wired when it
+  renders and the previous node is cleaned up when the ref moves.
+- `v-focusable` — bare marker; `v-spatial-container="'tokens'"` — container
+  with reactive token updates.
+
+## Svelte — `spatial-nav-css/svelte`
+
+Actions and the store contract are plain functions, so this works with
+Svelte 3/4/5 and imports nothing from the svelte package.
+
+```svelte
+<script>
+  import { onDestroy, onMount } from 'svelte'
+  import { createSpatialNav, focusable, spatialContainer } from 'spatial-nav-css/svelte'
+  import 'spatial-nav-css/css'
+
+  const { nav, focused, destroy } = createSpatialNav()
+  onMount(() => { nav.focusFirst() })
+  onDestroy(destroy)
+</script>
+
+<section use:spatialContainer={'wrap remember'}>
+  <button use:focusable={{ autofocus: true }} on:click={open}>Card A</button>
+  <button use:focusable={{ navRight: 'none' }}>Card B</button>
+</section>
+
+<p>Focused: {$focused?.textContent ?? 'nothing'}</p>
+```
+
+- `createSpatialNav(options)` → `{ nav, focused, destroy }` where `focused`
+  is a readable store of the current spatial target. It starts immediately;
+  during component initialization, action-rendered DOM may not exist yet, so
+  perform initial `focusFirst()` in `onMount` as above.
+- `use:focusable={params}` — marker + overrides + `onFocus`/`onActivate`;
+  params update reactively. Those callbacks observe custom spatial events;
+  native button actions should normally stay on `on:click`. The action only
+  removes `data-*` attributes it set itself, so navigation declared directly
+  in your markup survives a param update and the action's teardown.
+- `use:spatialContainer={'tokens'}` — container marker.
+- `focusedStore(nav)` — the store alone, for navs created elsewhere.
+
+## Web Components — `spatial-nav-css/elements`
+
+Zero-framework, declarative, light-DOM (page CSS applies normally):
+
+```html
+<script type="module">
+  import { defineSpatialElements } from 'spatial-nav-css/elements'
+  defineSpatialElements()
+</script>
+
+<spatial-nav auto-focus>
+  <spatial-container remember>
+    <button>Home</button><button>Library</button>
+  </spatial-container>
+  <spatial-container wrap remember>
+    <button>Card</button><button>Card</button>
+  </spatial-container>
+</spatial-nav>
+```
+
+- `<spatial-nav>` — owns a nav scoped to its subtree. Attributes:
+  `adapters="keyboard gamepad"` (default; `adapters=""` for a programmatic
+  island), `auto-focus`. The instance is exposed as `element.nav`.
+  Destroyed on disconnect.
+- `<spatial-container>` — boolean attributes `contain` / `wrap` /
+  `remember`, kept in sync reactively.
+- `defineSpatialElements({ navTag?, containerTag?, registry? })` — register
+  under custom names if the defaults collide. Idempotent.
+
+Multiple `<spatial-nav>` islands can coexist. A region ignores direction while
+real focus is inside another root. If no element holds focus, more than one
+listening island can attempt to claim first focus; use `adapters=""` on
+secondary/programmatic islands when one input stream should own the surface.
+
+## Angular, Solid, others
+
+No dedicated adapter yet. The core works when its lifecycle is tied to the
+framework's client mount; this abbreviated Angular example includes cleanup:
+
+```ts
+// Angular: a service + a directive
+@Injectable({ providedIn: 'root' })
+export class SpatialNavService implements OnDestroy {
+  readonly nav = createSpatialNavigation()
+  constructor() { this.nav.start() }
+  ngOnDestroy() { this.nav.destroy() }
+}
+
+@Component({ /* root component metadata */ })
+export class AppComponent implements AfterViewInit {
+  constructor(private spatial: SpatialNavService) {}
+  ngAfterViewInit() { this.spatial.nav.focusFirst() }
+}
+
+@Directive({ selector: '[focusable]' })
+export class FocusableDirective {
+  constructor(el: ElementRef<HTMLElement>) { el.nativeElement.setAttribute('data-focusable', '') }
+}
+```
+
+Solid, Qwik, Lit, HTMX, plain HTML: render `data-focusable` /
+`data-spatial-container` attributes and call `createSpatialNavigation()`
+once per client application instance, then destroy it at unmount. During SSR,
+the factory returns the documented no-op facade when no DOM root exists; the
+client must create a separate live instance, and engine-dependent work belongs
+after client mount. Direct `new SpatialEngine()` construction remains
+browser-only unless an explicit DOM root is supplied. Prefer native controls;
+use `data-focusable` only when an intentional custom spatial stop has the
+required semantics and keyboard behavior.
+
+## Portaled overlay libraries (Radix, Headless UI, Ark, MUI, …)
+
+These libraries all behave the same way, and it is worth understanding
+because none of it involves a native `<dialog>`:
+
+- **They render into a portal at `document.body`.** That is outside a scoped
+  `root`, so a scoped engine never sees the overlay at all. Either run the
+  engine on the document, or give it a root that contains the portal target.
+- **They contain focus by `aria-hidden`-ing the rest of the page**, not with
+  `showModal()`. The engine honors that unconditionally — `aria-hidden`,
+  `inert`, `hidden`, and an open native modal are enforced even when you pass
+  a custom `visibilityFilter` (which replaces only the *rendering* check).
+  So modal containment works without extra configuration; a **non-modal**
+  popover deliberately does not aria-hide the page, and if you need
+  containment there, add `data-spatial-container="contain"` to the panel.
+- **Their collections use roving tabindex.** Every menu item, option, and tab
+  except the current one carries `tabindex="-1"`, so the engine sees a single
+  stop and directional input reports `spatial:nofocustarget`. Add
+  `data-focusable` to the items to opt them back in; the library's own focus
+  bookkeeping continues to work because spatial focus is real DOM focus.
+- **Give the overlay an explicit entry point.** These focus traps focus the
+  dialog's own `tabindex="-1"` surface on open, which is not a spatial stop.
+  The engine treats that as unclaimed focus and a direction press will claim
+  from it, but the first press is then spent getting *into* the dialog. Mark
+  the primary action `data-spatial-autofocus`, or call
+  `nav.claimFocus('#confirm')` after opening, so focus starts where you want.
+- **Some triggers do not act on `click`.** `activate()` synthesizes a click,
+  which opens a native `<button>` or a Radix/Headless UI trigger, but **MUI's
+  `Select` binds only `mousedown` and `keydown`** — a controller press does
+  nothing at all. A Radix `DropdownMenu` trigger is the same
+  (`pointerdown`/`keydown`). For those, control the open state yourself from
+  `spatial:activate`:
+
+  ```tsx
+  const { ref } = useFocusable<HTMLButtonElement>({
+    onActivate: (event) => {
+      event.preventDefault() // suppress the synthetic click
+      setOpen(true)
+    },
+  })
+  ```
+
+- **Watch for stray focus guards.** Some libraries insert zero-size
+  `tabindex="0"` sentinels around an open layer. They are legitimate focus
+  stops, so `focusFirst()` and auto-restore can land on one. Exclude them:
+  `focusableSelector: `${DEFAULT_FOCUSABLE_SELECTOR}:not([data-radix-focus-guard])``.
+
+Runnable, tested integrations for each of these libraries live in
+[`examples/`](https://github.com/SauceTaster/spatial-nav-css/tree/main/examples).
+
+---
+
+<!-- source: docs/input-devices.md -->
+
+# Input devices
+
+The adapter contract has five intent variants: four user actions—`direction`,
+`activate`, `release`, and `back`—plus `activationcancel`, which abandons a
+stored activate press when release becomes unobservable. In the composed
+navigation path, an `activationcancel` intent removes a live pairing and
+produces `spatial:activatecancel` on its original target when that target is
+still connected and inside the engine root. Otherwise the pairing is removed
+without a target event. Keyboard and Gamepad API adapters ship in the box;
+every host still determines which hardware and events a web page can observe.
+
+## Coverage matrix
+
+| Device | Path into the library | Notes |
+| --- | --- | --- |
+| Xbox, DualShock/DualSense, Switch Pro, and other controllers | Gamepad API → `gamepadAdapter()` | Supported when the browser exposes the device with [`pad.mapping === 'standard'`](https://w3c.github.io/gamepad/#remapping). Exposure and mapping vary by browser, OS, permissions, host, and controller. |
+| Steam Input | Gamepad API → `gamepadAdapter()` | Works when [Steam Input gamepad emulation](https://partner.steamgames.com/doc/features/steam_controller/steam_input_gamepad_emulation_bestpractices) is configured and the host browser exposes that virtual device as a standard mapping. Keyboard/mouse emulation is a different input path. |
+| IR / TV remotes | Keyboard events → `keyboardAdapter()` | When the TV platform exposes remote buttons as keyboard events, defaults cover arrows/OK, [LG webOS Back](https://webostv.developer.lge.com/develop/guides/magic-remote) (`461`), and [Samsung Tizen Return](https://developer.samsung.com/smarttv/develop/guides/user-interaction/remote-control.html) (`10009`). Test target devices and extend `keyCodeMap`; codes and browser behavior vary by model and OS version. |
+| Keyboard | `keyboardAdapter()` | arrows / Enter / Escape / `BrowserBack` by default, plus documented legacy remote/back codes; `keymap` replaces the `KeyboardEvent.key` table and `keyCodeMap` merges legacy-code overrides |
+| Mouse / touch | no adapter for native focus | in light DOM, if the interaction focuses an element matching the engine selector, its `focusin` is adopted; arbitrary clicks and taps do not necessarily move focus |
+| Anything else | implement `InputAdapter` | see below |
+
+Support is capability-based, not a certification of every controller or TV
+sold under these names. The automated suite uses simulated events and Gamepad
+objects; it does not drive physical devices. Maintain an application-specific
+matrix of browser/webview versions, controller mappings, remote codes, and
+permission behavior, and run it on the slowest supported hardware.
+
+Browsers commonly gate Gamepad API exposure until the user interacts with a
+controller, and a document's permissions policy may disable it. Applications
+should show a neutral “press any button” state and treat controller discovery
+as asynchronous rather than assuming every connected device is immediately
+enumerable. The built-in adapter uses standard-map d-pad indices, axes 0/1,
+and face buttons; `buttonMap` does not remap axes or a nonstandard d-pad.
+
+Keyboard action lookup checks the configured `keymap` first, then the merged
+legacy `keyCodeMap`. Consequently, replacing `keymap` alone does not disable a
+default whose numeric key code is still present. Remap that code through
+`keyCodeMap`, or use a custom adapter when it should be left unmapped.
+
+## Steam Input integration paths
+
+There are two distinct integration paths:
+
+1. **Gamepad emulation.** When a user or host configures Steam Input to emulate
+   a gamepad/XInput device and the browser exposes that virtual device through
+   Gamepad API with `mapping === 'standard'`, `gamepadAdapter()` can consume it
+   without Steam-specific code. Do not assume this for every Steam webview or
+   configuration: Steam Input can instead emulate keyboard/mouse input, and
+   browser exposure is host-dependent.
+
+2. **Native integration via Steamworks** (an Electron/CEF app shipping on
+   Steam that wants named action sets — "menu_up", "menu_select" — plus
+   per-action glyphs and haptics): use the Steamworks SDK through a binding
+   such as `steamworks.js` and feed actions in through a custom adapter:
+
+```ts
+import type { InputAdapter } from 'spatial-nav-css'
+
+export function steamworksAdapter(steamInput: SteamworksInputClient): InputAdapter {
+  let stopPolling: (() => void) | undefined
+  return {
+    id: 'steamworks',
+    start(ctx) {
+      let prev = { up: false, down: false, left: false, right: false, select: false, back: false }
+      let selectDownAt: number | null = null
+      const timer = ctx.window.setInterval(() => {
+        const cur = steamInput.readMenuActions() // your action-set read
+        for (const dir of ['up', 'down', 'left', 'right'] as const) {
+          if (cur[dir] && !prev[dir])
+            ctx.dispatch({ type: 'direction', direction: dir, repeat: false, source: 'steamworks' })
+        }
+        if (cur.select && !prev.select) {
+          selectDownAt = ctx.window.performance.now()
+          ctx.dispatch({ type: 'activate', source: 'steamworks' })
+        }
+        if (!cur.select && prev.select && selectDownAt !== null) {
+          ctx.dispatch({
+            type: 'release',
+            durationMs: ctx.window.performance.now() - selectDownAt,
+            source: 'steamworks',
+          })
+          selectDownAt = null
+        }
+        if (cur.back && !prev.back) ctx.dispatch({ type: 'back', source: 'steamworks' })
+        prev = cur
+      }, 16)
+      stopPolling = () => {
+        ctx.window.clearInterval(timer)
+        if (selectDownAt !== null) {
+          ctx.dispatch({ type: 'activationcancel', source: 'steamworks' })
+        }
+        selectDownAt = null
+      }
+    },
+    stop() { stopPolling?.(); stopPolling = undefined },
+  }
+}
+```
+
+`SteamworksInputClient` and `readMenuActions()` above are application-level
+pseudotypes, not exports from this library or a claimed `steamworks.js` method.
+Follow the selected binding's current initialization, frame-pump, action-set,
+handle, and shutdown APIs. This abbreviated adapter edge-detects actions but
+does not implement held-direction repeat; add the host-specific repeat behavior
+your UI needs. If the same physical input is also exposed through a virtual
+Gamepad API device, avoid registering both paths or one press may dispatch
+twice:
+
+```ts
+const nav = createSpatialNavigation({
+  adapters: isSteamNative ? [keyboardAdapter(), steamworksAdapter(client)]
+                          : [keyboardAdapter(), gamepadAdapter()],
+})
+```
+
+## Dedicated IR receivers (WebHID / Web Serial)
+
+Many TV browsers expose their bundled remote through keyboard events, which
+`keyboardAdapter()` can consume after device-specific verification. For a
+*raw* IR receiver (USB dongle or custom hardware) on desktop, WebHID is one
+possible adapter path:
+
+```ts
+import type { AdapterContext, InputAdapter } from 'spatial-nav-css'
+
+export function webHidIrAdapter(device: HIDDevice, decode: (data: DataView) => string | null): InputAdapter {
+  let ctx: AdapterContext | null = null
+  const onReport = (e: HIDInputReportEvent) => {
+    const button = decode(e.data) // your protocol: NEC, RC-5, …
+    const context = ctx
+    if (!context || !button) return
+    if (button === 'ok') {
+      context.dispatch({ type: 'activate', source: 'ir' })
+      if (ctx === context) {
+        context.dispatch({ type: 'activationcancel', source: 'ir' }) // momentary tap: no hold
+      }
+    } else if (button === 'back') context.dispatch({ type: 'back', source: 'ir' })
+    else if (button === 'up' || button === 'down' || button === 'left' || button === 'right') {
+      context.dispatch({ type: 'direction', direction: button, repeat: false, source: 'ir' })
+    }
+  }
+  return {
+    id: 'ir',
+    start(c) { ctx = c; device.addEventListener('inputreport', onReport) },
+    stop() { device.removeEventListener('inputreport', onReport); ctx = null },
+  }
+}
+```
+
+The [WebHID API](https://wicg.github.io/webhid/) is limited-availability and
+secure-context only. `requestDevice()` must be initiated by a user gesture,
+and `device.open()` is asynchronous and may be rejected. Request, open, and
+error-handle the device before registering the adapter; decide separately
+whether stopping the adapter should close a device shared with other code.
+TypeScript projects may also need ambient WebHID declarations because these
+interfaces are not present in every compiler DOM library. Web Serial has
+different permission and lifecycle APIs but can feed the same intent contract.
+This sample treats OK as a momentary tap and cancels its release pairing
+immediately. A decoder that exposes button-down/up can instead emit `release`
+with a duration, or `activationcancel` if ownership is lost. The sample also
+assumes `decode()` has already handled protocol
+repeats/debouncing; raw IR reports often need edge/repeat policy before
+activate or back intents are safe to dispatch.
+
+The same pattern fits MIDI pads, Kinect-style gesture input, voice commands
+("move left"), or a WebSocket from a phone-as-remote.
+
+## Repeat & feel tuning
+
+- Gamepad: `initialRepeatDelayMs` (400) then `repeatIntervalMs` (130) while
+  held. Console UIs commonly accelerate long holds — implement by lowering
+  the interval over time in a custom adapter. The `repeat` flag is visible to
+  a direct `InputManager` handler, but the composed navigation engine does not
+  copy it into `SpatialEventDetail`; keep repeat-sensitive policy at the
+  adapter/manager boundary unless the application adds its own signal.
+- Keyboard: repeats use the OS key-repeat rate; `intent.repeat` mirrors
+  `KeyboardEvent.repeat`.
+- The deadzone (0.5) is deliberately high — menu navigation wants flicks,
+  not analog drift. Lower it for cursor-like feels.
+
+## Multiple devices at once
+
+All adapters run concurrently and their intents interleave in one engine; the
+library does not lock the UI to one active device. The built-in adapters use
+their ids in `detail.source`; custom adapters should likewise dispatch their
+own stable id as `source` when applications use it to swap button glyphs. Also
+handle lifecycle sources such as `api`, `autofocus`, and `restore` rather than
+treating the value as a closed device enum.
+
+**One input source per surface.** Don't run `keyboardAdapter()` alongside a
+custom host adapter that *also* delivers the same DOM key events — e.g. a CEF
+or webview bridge that forwards the host's key presses into the page. Both
+would fire and a single press would navigate twice. When embedding, pick one:
+use only your host adapter inside the embed, and the keyboard/gamepad adapters
+only in a real browser (detect the environment once at startup). See the
+[InputAdapter contract](js-api.md#input-adapters) for the complete intent
+shape.
+
+---
+
+<!-- source: docs/recipes.md -->
+
+# Recipes — common use cases
+
+Concrete patterns, shortest-thing-that-works first. The HTML/data-attribute
+patterns can be rendered through the React, Vue, or Svelte adapters as well.
+
+## TV / streaming home screen (rails of cards)
+
+Rows that remember their column, vertical movement between rails:
+
+```html
+<main>
+  <div class="rail" data-spatial-container="remember">
+    <button class="card" type="button">…</button>
+    …
+  </div>
+  <div class="rail" data-spatial-container="remember">…</div>
+</main>
+```
+
+- `remember` per rail gives the "come back to where you were" feel.
+- Don't add `wrap` to rails unless you really want carousel semantics —
+  wrap means left from the first card jumps to the last.
+- Each rail's zone rect includes its box and mounted cards, which helps
+  vertical moves compare rails as bands even when a focused card is scrolled
+  far to the right. Exact results still follow the scoring rules and mounted
+  geometry.
+
+## Game-launcher shell (header + sidebar + content)
+
+```html
+<header data-spatial-container>
+  <button data-spatial-autofocus>Store</button> …
+</header>
+<nav data-spatial-container="remember"> … </nav>
+<main>
+  <div data-spatial-container="wrap remember"> … </div>
+</main>
+```
+
+Sibling containers compete as zones. In this common layout, that usually makes
+“right from the sidebar” select the content zone; once a move selects the
+header zone, its declared default controls entry. Use explicit overrides when
+a product requires an invariant route regardless of geometry.
+
+## Modal dialog (native modal + directional containment)
+
+For the engine's directional search, native `<dialog>.showModal()` needs no
+container marker: in browsers with `:modal` support, the engine recognizes the
+top layer and excludes outside content while the modal is open. The dialog
+still needs an accessible name, an intentional initial-focus target, and a
+clear close action. Browsers normally restore the previously focused invoker
+on close when it is still available; verify restoration in the application
+lifecycle and restore explicitly when necessary.
+
+```ts
+const onSpatialBack = (event: Event) => {               // B / Escape closes
+  if (!dialog.open) return
+  event.preventDefault()
+  dialog.close()
+}
+dialog.addEventListener('spatial:back', onSpatialBack)
+dialog.addEventListener('close', () => {
+  dialog.removeEventListener('spatial:back', onSpatialBack)
+}, { once: true })
+dialog.showModal()
+nav.focus('#dialog-confirm')                            // pick the entry point
+```
+
+**Custom overlays** (a positioned `<div>`, no top layer) may declare spatial
+containment and handle restore themselves:
+
+```html
+<div
+  class="modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="custom-modal-title"
+  data-spatial-container="contain"
+>
+  <h2 id="custom-modal-title">Confirm removal</h2>
+  <button data-spatial-autofocus>Confirm</button>
+  <button>Cancel</button>
+</div>
+```
+
+```ts
+nav.focus('.modal [data-spatial-autofocus]')          // enter on open
+// on close: nav.focus(previouslyFocused)
+```
+
+`contain` affects directional navigation only. A custom modal must separately
+manage Tab focus, outside-content inertness, pointer interaction, accessible
+name/description, Escape behavior, and focus restoration. Prefer native
+`<dialog>` or a framework's complete accessible modal component.
+
+React Aria's `Modal` owns the modal accessibility behavior; adding
+`spatialZone('contain')` only adds directional containment. In environments
+without `:modal` selector support, add `data-spatial-container="contain"` to
+native dialogs for the engine, while retaining native or framework modal focus
+management.
+
+`spatialAlert()` and `spatialConfirm()` mount under `document.body` by default.
+For an engine scoped to an element, pass that element as `mount` so the running
+instance contains the generated dialog:
+
+```ts
+await spatialConfirm('Remove this item?', { mount: appRoot })
+```
+
+## Focusing content that loads asynchronously
+
+`autofocus` is a one-shot: it runs inside `start()`, at which point a
+data-driven screen is still skeletons. The only focusable things on the page
+then are chrome — a header link, a filter — so that is where focus lands, and
+nothing moves it when the real content arrives.
+
+Use `claimFocus()` when the data lands. It focuses the target only while
+focus is still unclaimed, so it fills the gap without yanking focus away from
+someone who already started navigating (or from a second nav region):
+
+```ts
+const nav = createSpatialNavigation() // note: no autofocus
+nav.start()
+
+const games = await loadGames()
+renderGrid(games)
+nav.claimFocus('.game-card') // no-op if the user already moved
+```
+
+In React, run it in an effect keyed to the loading flag:
+
+```tsx
+function Library() {
+  const nav = useSpatialNavigation()
+  const { data, isPending } = useQuery(gamesQuery)
+
+  useEffect(() => {
+    if (!isPending) nav.claimFocus('[data-card]')
+  }, [isPending, nav])
+
+  return <Grid games={data} />
+}
+```
+
+`claimFocus` dispatches `spatial:focus` with `source: 'claim'`, so analytics
+or a "press a key to start" overlay can tell an engine-placed focus from a
+deliberate user move. Prefer it over `focusFirst()` for anything that runs
+after first paint; `focusFirst()` is unconditional and will interrupt a user
+mid-navigation.
+
+## Pagination / infinite scroll at the edge
+
+`spatial:nofocustarget` fires on the current spatial target when a direction
+finds nothing — the hook for loading more:
+
+```ts
+import type { SpatialEvent } from 'spatial-nav-css'
+
+let loadingNextPage = false
+grid.addEventListener('spatial:nofocustarget', (event) => {
+  const e = event as SpatialEvent
+  if (e.detail.direction !== 'down' || loadingNextPage) return
+  const origin = event.target as HTMLElement
+  loadingNextPage = true
+  void (async () => {
+    try {
+      await loadNextPage()              // append more cards
+      if (nav.getFocused() === origin) nav.navigate('down')
+    } catch (error) {
+      showLoadError(error)
+    } finally {
+      loadingNextPage = false
+    }
+  })()
+})
+```
+
+## Settings form (mixed widgets)
+
+Text fields need their arrow keys; the keyboard adapter already ignores
+events from editable elements, so focus "sticks" inside an input until the
+user Tabs or clicks out. With the default `ignoreEditable: true`, all mapped
+keys—including Escape and Enter—are ignored while the event target is
+editable. Add application-level Escape handling or a custom adapter when a
+field should also trigger `spatial:back`.
+
+That handler needs no navigation instance. Spatial focus *is* real DOM focus,
+so calling `.focus()` on wherever the user should end up is enough — the
+engine adopts it through its own `focusin` listener. Delegate once on the
+form, and touch only Escape so the arrow keys stay native:
+
+```ts
+import { isEditable } from 'spatial-nav-css'
+
+form.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return
+  const target = event.target as HTMLElement
+  if (!isEditable(target)) return
+  event.preventDefault()
+  document.querySelector<HTMLElement>('#settings-nav .is-current')?.focus()
+})
+```
+
+A native **`<select>` is handled for you**: it would otherwise be a dead end,
+since a closed select consumes all four arrows plus Enter and Escape. The
+keyboard adapter treats it like the range slider — up/down stay native (they
+change or open the list) and **left/right navigate out** — so the control is
+always escapable. A row containing one should therefore keep a horizontal
+neighbour, or set `--nav-left` / `--nav-right` explicitly.
+
+Semantic adapters are different. `gamepadAdapter()` dispatches intents without
+inspecting the DOM, so a controller press navigates *away* from a focused
+`<select>` and can never change its value. For controller-driven UIs, replace
+native selects with a listbox you drive yourself, or bridge the intents.
+
+With the default `ignoreEditable: true`, for keyboard input and remotes exposed
+as keyboard events, the built-in adapter leaves a horizontal range slider's
+left/right arrows to the browser
+and uses up/down as spatial exit directions. On a range carrying
+`aria-orientation="vertical"`, it leaves up/down native and uses left/right to
+exit. `gamepadAdapter()` and other semantic-intent adapters do not synthesize
+native slider key behavior: add application or custom-adapter logic if a
+controller should adjust the value instead of navigating.
+
+For a console-style **settings row that contains a slider**, keep focus on the
+native range input rather than making the surrounding row a second, custom
+slider. A wrapping label supplies the accessible name, and `:focus-within` can
+style the full row when the input holds focus:
+
+```html
+<label class="row">
+  <span>Rumble</span>
+  <input type="range" min="0" max="100" value="50">
+</label>
+```
+
+```css
+.row:focus-within { /* whole-row focus treatment */ }
+```
+
+Do not give the input `tabindex="-1"` and move focus to a generic row unless the
+application implements and tests the complete ARIA slider keyboard contract.
+
+Last row of the form, prevent falling out the bottom:
+
+```css
+.settings .row:last-child { --nav-down: none; }
+```
+
+## Grid with a "jump to sidebar" shortcut
+
+```css
+.grid .card:nth-child(4n + 1) { --nav-left: "#sidebar .active"; }
+```
+
+Per-direction overrides are ordinary CSS — they can vary by media query,
+theme, or `:nth-child` like anything else.
+
+## A control that owns an axis (sliders, scrubbers, steppers)
+
+A volume slider, a seek bar, a stepper: left/right should change the *value*,
+up/down should leave the control. The obvious implementation — an `onKeyDown`
+handler — only works for the keyboard. `gamepadAdapter()` and any other
+semantic adapter dispatch intents straight to the engine without synthesizing
+key events, so on the device you are actually targeting the control does
+nothing.
+
+Block the axis you own, then listen for the edge event the engine dispatches
+when a blocked direction is pressed. That fires whatever produced the intent —
+keyboard, controller, or `nav.navigate()` — so all three behave identically:
+
+```tsx
+const { ref } = useFocusable<HTMLDivElement>({ navLeft: 'none', navRight: 'none' })
+
+useEffect(() => {
+  const el = ref.current
+  if (!el) return
+  const onEdge = (event: Event) => {
+    const { direction, repeat } = (event as SpatialEvent).detail
+    if (direction !== 'left' && direction !== 'right') return
+    // A held control should move faster, the same way a list does.
+    setValue((v) => clamp(v + (direction === 'right' ? 1 : -1) * (repeat ? 5 : 1)))
+  }
+  el.addEventListener('spatial:nofocustarget', onEdge)
+  return () => el.removeEventListener('spatial:nofocustarget', onEdge)
+}, [])
+```
+
+Two things to get right:
+
+- **Own an axis only when nothing lives on it.** Blocking left/right is safe
+  for a full-width control; on a control with neighbours beside it you have
+  taken away the only way past.
+- **Prefer releasing at the ends** where you can: consume the press only while
+  the value can still move, and let it fall through to the engine at min/max.
+  A panel made entirely of sliders then still has a door out. (With
+  `onKeyDown`, "don't consume" means "don't call `preventDefault()`" — the
+  keyboard adapter skips events that are already default-prevented.)
+
+**Do not ship a native `<input type="range">` in a controller-driven UI.** It
+is broken in both directions at once: the keyboard adapter deliberately leaves
+the range's own axis native, so left/right adjust and never navigate — a dead
+end — while a semantic adapter never reaches the input at all, so left/right
+navigate away and the value can never change. One control, two contradictory
+behaviours split by input device. Build the control above instead.
+
+## Charts (ECharts, Recharts, Chart.js …)
+
+A chart is a picture, not a field of controls. Make the **controls** the
+spatial stops and let them drive the chart, rather than trying to navigate
+inside a rendered plot:
+
+```tsx
+<section data-spatial-container="remember">
+  <div className="chart-controls">
+    <button onClick={() => setRange('24h')}>24h</button>
+    <button onClick={() => setRange('7d')}>7d</button>
+    <button onClick={() => toggleSeries('cpu')}>CPU</button>
+  </div>
+  <MetricsChart range={range} series={series} />   {/* not a stop */}
+</section>
+```
+
+Two things to check in the library you use:
+
+- **Some chart libraries put themselves in the tab order.** Recharts 3 defaults
+  `accessibilityLayer` to `true`, which renders the root
+  `<svg role="application" tabindex="0">` and binds its own arrow-key cursor —
+  so the chart becomes a spatial stop *and* fights the engine for arrow keys.
+  Pass `accessibilityLayer={false}` (or exclude the element from
+  `focusableSelector`) unless you deliberately want that keyboard interaction,
+  in which case give it a container of its own and an explicit way out.
+- **A chart that has not measured yet reports a zero-size rect.** The engine
+  ignores degenerate rects when sizing a zone, but a *focusable* zero-size
+  element is still a stop the user can land on with nothing to see. Keep
+  non-interactive chart surfaces out of the focusable set entirely.
+
+## Virtualized lists (TanStack Virtual, react-window & friends)
+
+Geometry is read at navigation time, so the engine follows whatever is
+mounted; past the mounted edge, `attachVirtualEdges` from
+`spatial-nav-css/virtual` continues navigation (scroll → mount → focus):
+
+```ts
+import { attachVirtualEdges } from 'spatial-nav-css/virtual'
+
+attachVirtualEdges(nav, {
+  zone: scrollerEl,
+  count: () => total,
+  scrollToIndex: (i) => virtualizer.scrollToIndex(i),
+})
+```
+
+For the tested React Aria keyboard collection pattern, RAC owns its virtualized
+keyboard axis and the collection remains one spatial stop; do not attach this
+edge helper to the same collection. Gamepad and other semantic direction
+intents bypass RAC's keyboard handling, so controller traversal needs an
+application bridge or independently focusable items. Validate the actual
+RAC/browser version in use. Full guide: [virtualization.md](virtualization.md).
+
+## Keyboard vs gamepad glyphs
+
+```ts
+import type { SpatialEvent } from 'spatial-nav-css'
+
+const rememberDeviceSource = (event: Event) => {
+  const source = (event as SpatialEvent).detail.source
+  if (source === 'keyboard' || source === 'gamepad') {
+    document.body.dataset.inputSource = source
+  }
+}
+const sourceEvents = [
+  'spatial:focus',
+  'spatial:nofocustarget',
+  'spatial:activate',
+  'spatial:back',
+] as const
+for (const type of sourceEvents) {
+  document.addEventListener(type, rememberDeviceSource)
+}
+```
+
+```css
+body[data-input-source='gamepad'] .hint-keyboard { display: none }
+body[data-input-source='keyboard'] .hint-gamepad { display: none }
+```
+
+The built-in gamepad source does not identify Xbox versus PlayStation versus
+another controller. Use browser-exposed Gamepad metadata or a host adapter for
+family-specific glyphs, and provide a neutral fallback because identifiers and
+mapping exposure vary.
+
+## Second navigation island (e.g. a picture-in-picture player)
+
+```html
+<spatial-nav adapters="">   <!-- programmatic island: no own input -->
+  <button>Play</button><button>Close</button>
+</spatial-nav>
+```
+
+```js
+await customElements.whenDefined('spatial-nav')
+const pip = document.querySelector('spatial-nav')
+const pipNav = pip?.nav
+if (!pipNav) throw new Error('PiP navigation island is not ready')
+pipNav.focus('button')   // hand focus over explicitly when the PiP opens
+```
+
+Give secondary islands `adapters=""` and hand focus over explicitly when one
+input stream should own the surface. With multiple listening islands, a region
+normally ignores direction while real focus is in another root; when the page
+has no focused element, however, regions may compete to claim first focus.
+
+## Testing your own UI's navigation
+
+The engine takes injectable geometry — assert navigation in jsdom without a
+browser:
+
+```ts
+import { SpatialEngine } from 'spatial-nav-css'
+
+const engine = new SpatialEngine({
+  getRect: (el) => layout[el.id],     // your fixture rects
+  visibilityFilter: () => true,
+  scrollBehavior: false,
+})
+engine.focus(document.getElementById('a')!)
+engine.navigate('right')
+expect(engine.getFocused()?.id).toBe('b')
+```
+
+Injected geometry tests pin engine decisions, not browser layout. Add real-
+browser tests for transforms, scrolling, native dialogs, and Gamepad/keyboard
+event behavior, plus manual assistive-technology checks for custom widgets and
+modal flows.
+
+## Scroll feel
+
+- Default: `scrollIntoView({ block: 'nearest', inline: 'nearest' })`, with
+  `scrollBehavior: 'auto'`. `auto` follows the scroll container's computed CSS
+  `scroll-behavior`, so it is not an instant-scroll guarantee.
+- Smooth scrolling from either the option or CSS can be outrun by rapid d-pad
+  input because rects are read mid-animation. Use explicit
+  `scrollBehavior: 'instant'` for deterministic rapid chains, and validate the
+  selected behavior on target hardware. Under reduced motion, an explicit
+  `'smooth'` option becomes `'instant'`; adapt CSS smooth scrolling separately.
+- `--spatial-scroll-margin` keeps the ring clear of container edges.
+
+---
+
+<!-- source: docs/virtualization.md -->
+
+# Virtualized lists
+
+Virtualizers only mount items near the viewport, which breaks naive spatial
+navigation in two ways: items past the overscan **don't exist in the DOM**
+to be found, and the focused element can be **unmounted** by a scroll. Both
+need different integration per stack. The repository has headless contract
+tests against the named libraries with injected geometry and scrolling; those
+tests do not replace real-browser testing of layout, transforms, mount timing,
+or focus behavior.
+
+## TanStack Virtual — `spatial-nav-css/virtual`
+
+(Tests: `tests/virtual-tanstack.test.ts`, against `@tanstack/react-virtual`.
+Live demo: `demo/virtual.html` — 10,000 items.)
+
+Within the mounted window, TanStack renders DOM elements and the engine reads
+their current geometry each keypress. At the mounted edge the engine fires
+`spatial:nofocustarget`, and
+`attachVirtualEdges` completes the pattern — *compute next index → scroll →
+wait for mount → focus*:
+
+```tsx
+import { useEffect } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { attachVirtualEdges } from 'spatial-nav-css/virtual'
+
+const virtualizer = useVirtualizer({ count, getScrollElement, estimateSize })
+
+useEffect(() => {
+  const zone = scrollerRef.current
+  if (!zone) return
+  return attachVirtualEdges(nav, {
+    zone,                                  // also a data-spatial-container
+    count: () => count,
+    scrollToIndex: (i) => virtualizer.scrollToIndex(i),
+  })
+}, [nav, virtualizer, count])
+
+// items carry their index (TanStack's measurement convention already does):
+<button key={vi.key} data-index={vi.index} style={virtualItemStyle(vi)}>…</button>
+```
+
+The helper is DOM-level and framework-agnostic. It can be adapted to
+TanStack's React/Vue/Svelte/Solid integrations, react-window, or hand-rolled
+windowing when the host supplies equivalent `scrollToIndex`, item-index, and
+mount-settle hooks. The exact snippet above is TanStack-specific; the demo uses
+a hand-rolled implementation of the same contract.
+
+Options worth knowing:
+
+- `axis: 'horizontal'` for horizontal virtualizers; `step(index, direction)`
+  for grids (return `index ± columns` for vertical moves).
+- `findElement` / `getIndex` if you can't use `data-index`.
+- `maxAttempts` controls mount-settle retries (default 20) and must be a
+  non-negative safe integer.
+- A stale advance is cancelled if a newer one starts, and the helper won't
+  yank focus if the user moved it elsewhere while waiting.
+
+**Unmount recovery**: immediately after a focused item unmounts, the engine may
+report nothing focused; a later direction can claim a mounted item. With the
+default `autoRestoreFocus`, the engine may instead run its debounced fallback
+first (container memory → default → first mounted focusable). Neither path
+preserves virtual item identity automatically. If focus should *follow* the
+window or a logical item, restore it by stable index/key from the virtualizer's
+range-change callback.
+
+### Preconditions worth knowing before you wire it up
+
+- **`attachVirtualEdges` reacts to `spatial:nofocustarget`, which only fires
+  when the search has escalated all the way to the root and found nothing.**
+  If your virtualized list sits beside a taller column, pressing down at the
+  *mounted* edge finds a candidate in that neighbouring column and the helper
+  never hears about it — focus jumps sideways instead of paging. Either make
+  the list the last block along its scroll axis, or block the direction at the
+  boundary (`--nav-down: none` / `data-nav-down="none"`) so the edge is a real
+  edge.
+- **Two owners of one `scrollTop`.** The engine scrolls focus into view and the
+  virtualizer scrolls to an index. If a `scrollToIndex` target happens to equal
+  the current DOM `scrollTop`, no scroll event fires, the row never mounts, and
+  the advance quietly gives up. Prefer `scrollBehavior: 'instant'` (or `false`,
+  letting the virtualizer own scrolling) when combining the two.
+
+### Accelerated scrolling in a virtualized list
+
+Holding a direction in a long list should cover ground — one item per press is
+unusable at 400 items. Two pieces cooperate, and they meet at the mounted edge:
+
+- **Inside the window** the engine finds a target, so `spatial:beforefocus`
+  fires and carries `detail.repeat`. An application handler can veto that
+  one-step move and focus a further item instead (stride, or jump to the next
+  section).
+- **At the edge** there is no target, so `spatial:nofocustarget` fires instead
+  and `attachVirtualEdges` takes over. Its `step(index, direction, repeat)`
+  receives the same flag, so return a bigger jump for held presses:
+
+  ```ts
+  step: (index, direction, repeat) =>
+    direction === 'down' ? index + (repeat ? COLUMNS * 3 : COLUMNS) : null
+  ```
+
+The trap is the seam between them. If your own accelerated jump lands focus on
+the *last mounted* item, the next held press produces `nofocustarget` rather
+than `beforefocus`, your repeat counter stops advancing, and the hold appears
+to stall. Scroll the target to the **middle** of the window when you focus it
+(`scrollToIndex(i, { align: 'center' })`), even when the item is already
+mounted, so there are mounted rows on both sides and the accelerated path keeps
+receiving `beforefocus`.
+
+Also pair acceleration with `scrollBehavior: 'instant'` (or `false`): a smooth
+scroll animation has not landed before the next repeat arrives.
+
+### Testing a virtualized list headlessly
+
+TanStack Virtual measures with `offsetWidth`/`offsetHeight` and bails out of
+`calculateRange` when the outer size is `0`. jsdom reports `0` for both, so a
+straightforward port of the recipe above renders **zero rows** and the test
+looks broken rather than failing usefully. `initialRect` does not rescue it —
+the resize observer overwrites it on attach.
+
+Supply a floor for the measurement, but **compose with the built-in observer
+rather than replacing it** — a bare `cb(...)` measures once and silently
+disables resize observation for the life of the list:
+
+```ts
+import { observeElementRect } from '@tanstack/react-virtual'
+
+useVirtualizer({
+  // …
+  // A real fix for SSR and hidden tabs too, not just a test shim.
+  observeElementRect: (instance, cb) =>
+    observeElementRect(instance, (rect) =>
+      cb({ width: rect.width || PANEL_WIDTH, height: rect.height || PANEL_HEIGHT }),
+    ),
+})
+```
+
+Scrolling headlessly needs one more thing, and it is not the obvious one:
+`observeElementOffset` reads **`scrollTop`** (inside a `scroll` listener), so
+that is the property to define on the scroll element — `scrollTo`,
+`scrollHeight` and `clientHeight` alone leave `scrollToIndex` inert. Redefine
+`scrollTop` as a real accessor and dispatch a `scroll` event when it changes:
+
+```ts
+let top = 0
+Object.defineProperty(scroller, 'scrollTop', {
+  get: () => top,
+  set: (value) => {
+    top = value
+    scroller.dispatchEvent(new Event('scroll'))
+  },
+})
+Object.defineProperty(scroller, 'clientHeight', { get: () => PANEL_HEIGHT })
+Object.defineProperty(scroller, 'scrollHeight', { get: () => rowCount * ROW_HEIGHT })
+scroller.scrollTo = (options) => {
+  scroller.scrollTop = typeof options === 'number' ? options : (options?.top ?? top)
+}
+```
+
+The library's own `tests/virtual-tanstack.test.ts` takes a different route —
+injecting `scrollToFn` / `observeElementOffset` — which is simpler but does
+not exercise the production scroll path. Prefer the shim above when the point
+of the test is that scrolling works.
+
+## React Aria / Adobe collections
+
+(Tests: `tests/react-aria-virtualizer.test.ts`, against RAC's `Virtualizer`
++ `ListLayout` with 500 items.)
+
+For the tested vertical RAC `ListBox` pattern, React Aria owns DOM keyboard
+arrows along the collection orientation and its virtualizer manages the
+mounted boundary. This contract covers keyboards and remotes surfaced as
+keyboard events. From the spatial engine's perspective:
+
+- the virtualized collection is still **a single spatial stop**
+  (roving tabindex);
+- internal keyboard-arrow moves are adopted via `focusin`;
+- the orthogonal keyboard axis still exits the collection spatially.
+
+Gamepad and other semantic direction adapters bypass RAC's `KeyboardEvent`
+handling and therefore do not traverse the items inside this roving stop. For
+controller traversal, bridge those intents to a supported collection API or
+render independently focusable spatial items; validate that design with the
+actual virtualizer and browser.
+
+```tsx
+<Virtualizer layout={ListLayout} layoutOptions={{ rowSize: 40 }}>
+  <ListBox aria-label="Library" items={items}>…</ListBox>
+</Virtualizer>
+```
+
+Don't combine `attachVirtualEdges` with a RAC Virtualizer — two systems
+scrolling the same collection fight each other.
+
+## Rules of thumb
+
+| Stack | Inside the window | Past the window |
+| --- | --- | --- |
+| TanStack Virtual / react-window / custom | engine geometry | `attachVirtualEdges` |
+| RAC `Virtualizer` with the tested vertical `ListBox`, keyboard path | react-aria | react-aria |
+
+Treat `GridList`, `Table`, grid layouts, and other collection behaviors as
+separate integrations until they are tested with the exact RAC/browser version
+in use; they may consume a different set of arrow keys.
+
+`overscan ≥ 1` is a useful starting point because it often leaves a mounted
+geometric candidate in the scroll direction, but it is not a guarantee: item
+spacing, mount timing, clipping, and list boundaries still matter. Add
+`remember` when re-entry should prefer the last focused item if it remains
+mounted; otherwise the engine follows its documented fallback chain.
+
+---
+
+<!-- source: docs/performance.md -->
+
+# Performance
+
+Spatial navigation sits on the input path of the application. This engine reads
+live DOM configuration and geometry in JavaScript, so performance depends on
+the page structure, browser, device, and current layout state. This document
+explains what is measured and which invariant CI enforces; it is not a latency
+guarantee for untested hardware.
+
+## The budget
+
+Set a navigation-latency budget from the slowest supported device and the
+application's frame budget. Directional search runs on a press or configured
+repeat. The Gamepad API adapter polls on animation frames while a browser-
+exposed pad is connected, so its per-frame work is intentionally small and its
+button table is precomputed.
+
+## Reproducing measurements
+
+The shared TV-style fixture is a sidebar plus 10 rails × 50 cards: **506
+focusables** with nested `remember` containers (`bench/fixtures.ts`, mirrored
+by `demo/bench.html`). It is useful for regressions, but it is only one layout
+shape.
+
+Run the pure/function and headless-DOM benchmarks with:
+
+```sh
+npm run bench
+```
+
+Those Vitest benchmarks report:
+
+- pure geometry throughput for `distanceScore`, `classifyDirection`,
+  `findBestCandidate`, and `unionRects`;
+- the `findTarget()` call graph in jsdom at 100, 500, and 2,000 cards, with
+  deterministic injected rects and visibility.
+
+Rates and timings from these runs are machine-specific. Record the runtime
+version, OS, hardware, power state, and commit when publishing or comparing a
+result; compare like-for-like runs rather than copying one machine's numbers
+into a product budget.
+
+For a real browser, run `npm run demo` and open
+`http://localhost:4173/demo/bench.html`. It exercises layout, computed styles,
+visibility, focus, scrolling, and events. Its two rows use intentionally
+different workloads:
+
+- `findTarget()` samples changing origins and all four directions;
+- `navigate()` alternates right/left between adjacent cards.
+
+The rows are useful independently but are **not** a decomposition of “search”
+versus “search plus focus” and must not be compared to infer focus/event
+overhead. When recording browser results, include browser/version, OS, device,
+commit, foreground/background state, warmup, sample count, and relevant page
+conditions.
+
+## What one keypress does (and the regression that motivated all this)
+
+A `findTarget` pass reads per-element config (`getComputedStyle` for the
+`--nav-*` / `--spatial-*` properties), resolves containers up the ancestor
+chain, checks visibility, and reads rects. Earlier project notes recorded an
+uncached implementation doing **6 `getComputedStyle` calls per element, per
+touch** and **12,450 style reads for one search** on this fixture. The old
+implementation is no longer part of the runnable benchmark, so treat those
+figures as historical motivation rather than a reproducible current result.
+
+Three structural fixes brought the configuration-reading portion of that
+fixture to **65 style reads** in the current regression test. The test injects
+deterministic rects and `visibilityFilter: () => true`, so this count does not
+include browser layout or the default visibility fallback's possible style
+read:
+
+1. **One configuration `getComputedStyle` per touched element** — a single
+   computed-style object serves all six properties (`src/core/config.ts`).
+2. **A per-pass config cache** — every read function takes a
+   `NavConfigCache`; each element is read at most once per navigation, no
+   matter how many walks touch it. The cache lives for exactly one pass, so
+   runtime CSS changes still apply on the next keypress.
+3. **Path-compressed container resolution** — siblings share their
+   ancestors' answers, making zone grouping O(distinct ancestors) instead of
+   O(candidates × depth).
+
+Plus two smaller ones: `Element.checkVisibility()` is used when available, with
+a `getClientRects`/computed-style fallback, and the gamepad poll loop
+precomputes its button table rather than rebuilding it each frame.
+
+## Keeping it fast
+
+- `tests/perf-budget.test.ts` pins configuration style reads per pass (< 200
+  on the 506-element injected-layout fixture; currently 65). Reintroducing a
+  per-candidate-per-ancestor config read fails CI loudly.
+- `npm run bench` runs the V8 microbenchmarks (vitest bench): pure geometry
+  plus the full `findTarget` call graph in jsdom at 100 / 500 / 2,000 cards.
+- `demo/bench.html` measures a real browser path; run it on representative
+  target devices after engine or layout changes and compare with a recorded
+  baseline from the same environment.
+
+## Scaling notes & honest limits
+
+- The engine reads geometry fresh every keypress — no cached spatial index,
+  no MutationObserver invalidation. That's a deliberate trade: it's why
+  mounted virtualized items and reordering need no geometry registration.
+  Cost still grows with the candidates, zones, ancestor structure, style
+  complexity, and layout work relevant to a search. An application with many
+  simultaneously focusable elements should measure on target hardware and
+  consider a smaller `root` per region or virtualization.
+- `getRect` and `visibilityFilter` are injectable: an app that already knows
+  its geometry (a canvas-backed grid, a virtualizer) can bypass DOM reads
+  in those two hooks. Configuration and container discovery may still perform
+  other DOM work.
+
+---
+
+<!-- source: docs/edge-cases.md -->
+
+# Edge cases & behavior decisions
+
+What the engine does at the boundaries, and why. Most DOM/API behavior below
+has a regression test in `tests/`; browser layout, top-layer, device, and
+assistive-technology behavior still requires testing in the target runtime.
+
+## Geometry
+
+**Diagonal neighbors in a grid.** The default scoring strongly prefers a row
+neighbor when pressing right: candidates whose orthogonal projection overlaps
+the origin ("aligned") avoid a finite `1e6` penalty. This is a deliberate
+console-style bias, not an absolute guarantee. A sufficiently distant aligned
+candidate can lose, the application can tune the penalty, and a diagonal can
+win when no aligned candidate exists.
+
+**Sliver overlaps are not alignment.** By default, overlap must cover at least
+20% (`scoring.alignedOverlapRatio`) of the **smaller** of the two projected
+extents — the origin's or the candidate's. This library-specific default
+prevents a 1px graze from receiving the full same-row preference. Set the ratio
+to 0 for any-overlap alignment and tune it against the layouts and hardware
+your application supports.
+
+Measuring against the smaller extent is what makes the question symmetric. Were
+it measured against the origin alone, a full-width control — a media scrubber,
+a wide search field, a full-bleed row — could never be aligned with an
+ordinary-sized neighbour, because no button is 20% of the viewport wide: the
+control directly above it would take the misaligned penalty while a distant,
+wider element did not, and *which* neighbour won would change with the window
+width.
+
+**Nothing aligned at all.** Among misaligned candidates, the score is
+edge-gap distance plus 5× the off-axis travel needed (distance to the
+candidate's orthogonal span, not to its center) plus a mild center-offset
+term. The candidate with the lowest combined score wins; tune the balance via
+`scoring.orthogonalWeight` and `scoring.centerWeight`.
+
+**Wide zones.** Drift is measured to a candidate's span, so a band that
+laterally contains the origin costs no off-axis travel — a scrolled
+carousel's displaced *center* has less influence than it would under a
+center-only drift metric. The covered regression fixture keeps the aligned
+wide band ahead of a narrower diagonal alternative; extreme geometry or
+custom scoring can still change that result.
+
+**Overlapping elements.** Candidates overlapping the origin on the
+navigation axis form a second tier ('overlapping') that is only consulted when
+no candidate is strictly beyond the origin's far edge. Membership is decided by
+*edges*, not centers: the candidate must start further along the direction of
+travel **and** not extend back past the origin's near edge. Centers would make
+the test depend on candidate size — a narrow cell sharing a wide cell's left
+edge would read as "to its left" — and a candidate that merely *encloses* the
+origin (a full-height row label beside inset content) is not past it in any
+direction. Stacked and overlay layouts still navigate through this tier
+without changing the strictly-beyond preference used by ordinary layouts.
+
+**Collapsed candidate rects.** The pure chooser skips a rect only when both
+its width and height are non-positive. The default visibility filter separately
+excludes elements with no rendered client rect, such as most
+`display: contents` wrappers. Custom `getRect`/`visibilityFilter` hooks define
+the corresponding behavior for injected layouts.
+
+**Equal scores.** First in the engine's stable candidate iteration wins. That
+order is deterministic but is not a universal DOM-order promise across direct
+focusables and container-zone candidates. If the tie matters, disambiguate
+with `data-nav-*`.
+
+## Containers & zones
+
+**Sibling zones vs stray elements.** At each scope, nested containers compete
+as single zone rects and the search descends into the winner. In the covered
+sidebar/header/content fixture, this keeps a nearer diagonal header tab from
+beating the aligned content zone; other layouts still follow the documented
+geometry and scoring rules.
+
+**Scrolled carousels.** A zone rect is the union of its box and the rects of
+its mounted focusable descendants. A mounted card clipped outside the visible
+box can therefore remain in the alignment band, and wrap origins clear that
+union. Unmounted virtual items and non-focusable scroll content do not extend
+the zone rect.
+
+**Wrap is per-axis.** `wrap` engages only when candidates exist *behind*
+the focused element on the travel axis. Pressing down in a horizontal wrap
+row exits the row rather than wrapping sideways (regression-pinned).
+
+**Single-item wrap container.** Doesn't wrap to itself; navigation
+escalates or fails normally.
+
+**Empty containers.** A container with no focusable descendants does not
+compete as a zone. If the container element itself matches the focusability
+policy, it can still compete as an ordinary focus target.
+
+**Nested `remember`.** Memory is recorded on every `remember` ancestor, so
+entering the outer container restores the innermost leaf that actually had
+focus.
+
+**Stale memory.** If the remembered element was removed, hidden, or no
+longer belongs to the container, entry falls back to the container's
+default focus, then geometry. Memory is keyed weakly by the container, so the
+map does not keep a removed container alive; while a container remains alive,
+its remembered child remains referenced until that memory is replaced.
+
+**`remember` vs `data-spatial-autofocus`.** Memory wins once the container
+has been visited; autofocus is the cold-start entry.
+
+**Spatial containment (`contain`).** Blocks geometric exit and stops scope
+escalation for this library. It does not contain Tab, pointer, or
+assistive-technology navigation and is not a complete modal focus trap.
+Two escape hatches, both intentional: explicit `data-nav-*` overrides, and
+programmatic `nav.focus()`. `spatial:back` is the idiomatic "close".
+
+**Entering spatial containment.** Allowed: geometric focus can move in, but
+cannot leave through the contained search.
+
+**Native modal dialogs.** `showModal()` focus-blocks the page outside the
+top layer without setting any attribute; the engine detects `dialog:modal`
+and treats everything outside as invisible while it is open — no
+`data-spatial-container` needed for directional search (covered by the browser
+integration page and Playwright smoke test; jsdom lacks `:modal`, where the
+check degrades silently and the explicit
+`contain` pattern still applies). The current visibility lookup is designed
+for one native modal at a time; do not rely on it to identify the topmost of
+stacked `showModal()` dialogs. Manage a modal stack explicitly or keep only one
+open. Native dialog semantics, not `contain`, are responsible for Tab focus and
+outside-content inertness. Dialog-free pages skip the selector lookup via a
+tag-index length test.
+
+## Overrides
+
+**Overrides are authoritative.** `data-nav-right="#x"` skips geometry,
+spatial containment, wrap, memory, and autofocus redirection (pinned by test).
+The selector's first match must match the configured focusability policy, be
+enabled, and be visible. If it is ineligible, the move fails—later matches and
+geometry are not tried.
+
+**Malformed override selectors.** A syntactically invalid selector blocks
+the direction instead of throwing — a typo in markup must never crash the
+input path. An override that resolves to the origin itself is a dead end:
+`findTarget()` returns null and `navigate()` dispatches
+`spatial:nofocustarget`. Empty values are ignored entirely and fall through
+to geometry. All pinned.
+
+**`none`.** An explicit `none` blocks movement. `navigate()` handles that
+result like another dead end and dispatches `spatial:nofocustarget` on the
+origin; inspect `readNavConfig(el).explicit` when an edge handler needs to
+distinguish a deliberate block from a geometric miss.
+
+## Focus lifecycle
+
+**Focused element removed from the DOM.** With the default
+`autoRestoreFocus: true` and a started engine, the engine attempts restoration
+after a ~100ms debounce—to the nearest surviving container's memory, then its
+default focus, then its first focusable, then the root's entry point. A burst of
+removals coalesces into one attempt, and it does not override focus the
+application moved during the debounce. This is a fallback chain, not
+nearest-neighbor geometry; if no eligible target can take focus, focus remains
+unrestored. With restoration off—or before the debounce fires—`getFocused()`
+returns null and the next direction press attempts to claim first focus.
+
+**Mouse/touch and Tab.** In light DOM, a native `focusin` inside the root is
+adopted when its target matches the engine's focusable selector. Pointer, Tab,
+or programmatic focus on a matching stop therefore updates where spatial
+navigation continues; arbitrary clicks/taps and focus on excluded elements do
+not. Across shadow boundaries, focus-event retargeting follows the separate
+shadow DOM caveat below; `getFocused()` can resynchronize a tested open-root
+active-element chain.
+
+**Multiple nav regions.** A region whose root doesn't contain the focused
+element ignores direction input (doesn't consume it, doesn't steal focus).
+First-focus is only claimed when focus is on `<body>`/none (pinned by the
+elements + integration tests).
+
+**`spatial:beforefocus` veto.** Cancel it and the move silently doesn't
+happen; the origin keeps focus. Use sparingly — a veto with no visible
+feedback feels like a dead button.
+
+**`data-focusable` divs.** A div with no existing `tabindex` receives
+`tabindex="-1"` on first spatial focus so it can hold DOM focus without joining
+the Tab order. Add `tabindex="0"` when it should be Tab-reachable too, after
+supplying the semantics and keyboard behavior its role requires.
+
+## Input
+
+**Typing fields.** The keyboard adapter ignores events whose target is
+editable (text inputs, textareas, selects, contenteditable), leaving arrows,
+Enter, and Escape to the browser, widget, or application. Focus leaves a text
+field via Tab, click, or application-specific handling—not via this adapter's
+arrow navigation.
+
+**A native `<select>` is a dead end without an exit.** Text inputs at least
+leave Tab and a caret the user expects; a closed `<select>` consumes all four
+arrows, Enter, and Escape, so on a keyboard-only or remote-driven screen a
+focused select cannot be left by navigation at all. Every `<select>` in such a
+UI needs an application-provided escape route — see the Escape-delegation
+snippet in [recipes.md](recipes.md) under "Settings form". This is a property
+of the native control, not of the adapter's ignore rule.
+
+**Key repeat / stick repeat.** `intent.repeat` distinguishes held input.
+Gamepad repeat: 400 ms initial delay, 130 ms interval (configurable).
+Direction changes reset the repeat timer and fire immediately.
+
+**Gamepad polling.** Polling is rAF-driven, so browsers typically throttle or
+suspend it in background tabs; do not rely on background navigation timing.
+Polling stops entirely when no pad is exposed and resumes when the browser
+dispatches `gamepadconnected`.
+
+**Controller exposure.** Browsers may withhold a connected controller from
+`getGamepads()` and delay `gamepadconnected` until the user interacts with it;
+permissions policy may also disable the API. The adapter probes on start and
+self-stops when no exposed pad exists, then resumes when the browser dispatches
+`gamepadconnected`. Applications should present discovery as asynchronous.
+
+**Multiple pads.** All exposed connected pads are read, and each keeps
+independent repeat/button state. Intents still feed one engine; applications
+that need controller ownership or multiplayer arbitration must add that policy.
+
+**Arrow keys at an edge.** Once a region owns or successfully claims focus,
+direction input is consumed even at an edge so the page does not scroll out
+from under that UI; the edge is reported via `spatial:nofocustarget`. The
+initial `back`/Escape press is consumed only when a `spatial:back` listener
+calls `preventDefault()`. When it is handled, further mapped back keydowns with
+the same physical key identity are not redispatched until keyup or window blur
+and are suppressed at the browser level. After an unhandled initial press,
+true `event.repeat` keydowns are left alone, but a platform flood that
+incorrectly keeps `repeat: false` can dispatch back again. Application back
+handlers should call `preventDefault()` when they take ownership.
+
+## Rendering environments
+
+**jsdom / SSR.** Package imports are safe without a DOM. With no explicit DOM
+root, `createSpatialNavigation()` and the React provider supply a server-side
+no-op facade; `navigate`, `focus`, `focusFirst`, and `activate` return `false`,
+`getFocused()` returns `null`, lifecycle/adapter calls do nothing, and
+`.engine` access throws. A separate client render creates the live engine.
+Direct `new SpatialEngine()` construction still requires a DOM root. In jsdom,
+layout rects are zero; inject `getRect` and `visibilityFilter` for headless
+navigation tests.
+
+**Smooth scrolling vs fast input.** The default is `scrollBehavior: 'auto'`,
+which follows the target scroll container's computed CSS `scroll-behavior`.
+When smooth scrolling comes from either the option or CSS, rects are read
+mid-animation if input outruns the scroll, which can change target selection
+or produce no target. Use explicit `scrollBehavior: 'instant'` when
+deterministic rapid chains matter.
+
+**Reduced motion.** `prefers-reduced-motion` downgrades an explicit
+`scrollBehavior: 'smooth'` option to `instant` and disables the optional
+`.spatial-pop` scale effect. With the default `auto`, application CSS remains
+responsible for adapting any CSS `scroll-behavior: smooth` rule. The base focus
+outline does not add a transition.
+
+**Transforms.** Scoring uses `getBoundingClientRect`, i.e. post-transform
+geometry for both the origin and candidates. The `.spatial-pop` scale therefore
+can change classification or scoring; its default 1.04 scale is modest, but
+disable it when navigation must be invariant. Large transforms navigate by
+the resulting on-screen rects; verify clipped, panned, and offscreen states in
+a real browser.
+
+**Animating focusables.** Because geometry is sampled per keypress, a
+focusable mid-transition reports a moving rect — a fast arrow press during an
+entrance animation can read a half-arrived position and pick the wrong (or
+no) target. Prefer **opacity-only** entrance animations for focusables, or
+keep transform/size transitions short; avoid animating the width/height or
+translate of an element you also navigate to.
+
+**Collapsed rects.** A host layout problem, detached subtree, hidden page, or
+zero-sized viewport can collapse many candidates to coincident zero rects. The
+engine can emit a one-time diagnostic when a dead end has mostly collapsed
+candidates (suppressed when an available `NODE_ENV` is set to `production`).
+Inspect host layout and visibility first; minimum sizes or `clamp()` can help
+specifically when viewport-relative sizing collapses, but are not a general
+fix for every zero-rect cause.
+
+**`contain` governs a container's descendants, not the container itself.**
+The scope search starts at the focused element's *parent*, so while focus sits
+on the marked element, its own `contain` is not in effect. This matters for
+portaled overlays: several libraries focus the panel itself on open, and if
+that panel is the element carrying `contain`, directional navigation can leave
+it until focus moves to a child. Mark an ancestor instead where the library
+gives you one (Ark's `Dialog.Positioner`, for example), or give the panel an
+explicit entry point (`data-spatial-autofocus`, `initialFocus`) so focus never
+rests on the container. In practice most modal libraries also `aria-hidden`
+the rest of the page, which the engine enforces unconditionally, so
+containment usually still holds — but do not rely on the marker alone.
+
+**Shadow DOM.** Engine-driven focus and navigation are supported when the root
+element is inside open shadow DOM. `getFocused()` follows
+`shadowRoot.activeElement` chains because `document.activeElement` retargets to
+the host (covered by a regression test). Closed roots, navigation across a
+shadow boundary from outside, and every pointer/Tab retargeting combination are
+not covered by that contract; test the target browser. Candidate queries stay
+inside the configured root's tree.
+
+**iframes.** Each document needs its own instance — pinned by test,
+including the cross-realm trap: iframe documents fail `instanceof Document`
+checks, so the engine duck-types on `nodeType`. Crossing frame boundaries
+is the host app's job via `spatial:nofocustarget` on one side and
+`nav.focus()` on the other.
+
+**Deep DOMs.** Ordinary ancestor walks are iterative with path-compressed
+memoization, so the tested 300-level plain-element nesting does not recurse
+through that path and each distinct ancestor is read once per pass. Descent
+through deeply nested spatial-container zones is a separate recursive path and
+is not covered by that arbitrary-depth claim; bound and test pathological zone
+nesting if an application generates it.
+
+**Elements that are both focusable and containers.** A clickable card that
+contains focusable children competes twice — once as itself, once as a
+zone — with the two candidacies kept distinct (pinned by test).
+
+**SVG.** SVG `<a href>` elements may match the selector and can have usable
+geometry in modern browsers. SVG focus support varies by element and runtime;
+test the target browser or provide an explicit `focusableSelector` and rect
+policy. Zero-size SVG candidates are skipped like any other zero-size element.
+
+**Disabled fieldsets.** Buttons inside `<fieldset disabled>` match
+`:disabled` and are excluded, per the platform.
+
+**NaN gamepad axes.** Flaky drivers reporting NaN/Infinity axes read as
+centered rather than emitting phantom directions (pinned by test).
+
+**RTL.** Geometry is physical, not logical: `right` means visually right,
+which matches d-pads and arrow keys. Logical-direction mapping (if you want
+`nav-forward`) belongs in your keymap layer.

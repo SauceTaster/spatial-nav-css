@@ -70,7 +70,7 @@ function renderListBoxScene() {
 
 describe('react-aria-components interop', () => {
   it('a RAC collection appears as a single spatial stop', () => {
-    const { getByTestId } = renderListBoxScene()
+    const { getByRole, getByTestId } = renderListBoxScene()
 
     // Before entry, the listbox element itself is the tabbable stop (it
     // forwards focus inward); exactly one stop either way.
@@ -82,8 +82,18 @@ describe('react-aria-components interop', () => {
     expect(stops()).toHaveLength(1)
     expect(stops()[0]!.getAttribute('role')).toBe('listbox')
 
-    // After focus is inside, the roving item is the single stop.
+    // Entering through the collection root redirects to its current option;
+    // the engine treats that eligible in-root redirect as a successful move.
     const n = startNav()
+    let entered = false
+    act(() => {
+      entered = n.focus(getByRole('listbox'))
+    })
+    expect(entered).toBe(true)
+    expect(activeTestId()).toBe('opt-a')
+    expect(n.getFocused()?.dataset.testid).toBe('opt-a')
+
+    // After focus is inside, the roving item is the single stop.
     act(() => {
       n.focus(getByTestId('opt-b'))
     })

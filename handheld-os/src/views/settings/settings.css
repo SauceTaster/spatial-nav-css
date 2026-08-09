@@ -1,0 +1,217 @@
+.sv-root {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  min-height: 0;
+}
+
+/* ------------------------------------------------------------------- rail */
+.sv-rail {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 18px 10px;
+  overflow-y: auto;
+  border-right: 1px solid var(--os-line);
+  background: rgb(0 0 0 / 0.16);
+}
+.sv-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--os-r-md);
+  background: transparent;
+  color: var(--os-text-dim);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.sv-rail-item.is-current {
+  background: var(--os-surface-3);
+  color: var(--os-text);
+  font-weight: 600;
+}
+.sv-rail-glyph {
+  width: 20px;
+  text-align: center;
+  color: var(--os-accent);
+}
+
+/* ------------------------------------------------------------------ panel */
+.sv-panel {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  padding: 22px var(--os-pad) 40px;
+  overflow-y: auto;
+}
+.sv-panel-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+}
+.sv-group {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+}
+.sv-group-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--os-text-faint);
+  font-weight: 600;
+}
+.sv-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* ------------------------------------------------------------- range row */
+.sv-range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px auto;
+  align-items: center;
+  gap: 16px;
+}
+.sv-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--os-surface-3);
+  overflow: hidden;
+}
+.sv-range-fill {
+  display: block;
+  height: 100%;
+  background: var(--os-accent-strong);
+}
+
+/* ------------------------------------------------------------ text field */
+.sv-field {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface-2);
+  font-size: 14px;
+}
+.sv-field-label {
+  color: var(--os-text-dim);
+  font-size: 13px;
+}
+.sv-field-input {
+  padding: 9px 12px;
+  border: 1px solid var(--os-line);
+  border-radius: var(--os-r-sm);
+  background: var(--os-bg);
+  color: var(--os-text);
+  font: inherit;
+  font-size: 15px;
+}
+.sv-field.is-invalid .sv-field-input {
+  border-color: var(--os-bad);
+}
+.sv-field-message {
+  min-height: 1.2em;
+  font-size: 12px;
+  color: var(--os-text-faint);
+}
+.sv-field-message.is-error {
+  color: var(--os-bad);
+}
+
+/* ---------------------------------------------------------------- toggle */
+.sv-toggle-label {
+  display: grid;
+  text-align: left;
+}
+.sv-toggle-label small {
+  font-size: 11px;
+  color: var(--os-text-faint);
+}
+.sv-toggle.is-unavailable .os-toggle-track {
+  opacity: 0.4;
+}
+.sv-toggle[aria-disabled='true'] {
+  color: var(--os-text-faint);
+}
+
+/* ---------------------------------------------------------------- drives */
+.sv-drive {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 8px;
+  border: 0;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sv-drive-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sv-drive-bar {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--os-surface-3);
+  overflow: hidden;
+}
+.sv-drive-fill {
+  display: block;
+  height: 100%;
+  background: var(--os-accent);
+}
+
+/* ------------------------------------------------------------------ info */
+.sv-info-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--os-line);
+  font-size: 14px;
+}
+.sv-info-label {
+  color: var(--os-text-dim);
+}
+.sv-info-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----------------------------------------------------------- danger zone */
+.sv-danger {
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--os-bad) 45%, transparent);
+  border-radius: var(--os-r-md);
+  background: color-mix(in srgb, var(--os-bad) 7%, transparent);
+}
+.sv-danger .sv-group-title {
+  color: var(--os-bad);
+}
+.sv-danger p {
+  margin: 0;
+}
+
+/* Focus keys off the attribute, never the class — React rewrites className. */
+.sv-rail-item[data-spatial-focused],
+.sv-drive[data-spatial-focused] {
+  background: var(--os-surface-3);
+  color: var(--os-text);
+}
+.sv-field:focus-within {
+  background: var(--os-surface-3);
+}

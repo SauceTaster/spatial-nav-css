@@ -1,0 +1,112 @@
+.fv-root {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 16px var(--os-pad) var(--os-pad);
+  min-height: 0;
+}
+
+.fv-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.fv-drives {
+  display: flex;
+  gap: 8px;
+}
+.fv-drive {
+  padding: 9px 16px;
+  border: 0;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface);
+  color: var(--os-text-dim);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.fv-drive[aria-pressed='true'] {
+  background: var(--os-surface-3);
+  color: var(--os-text);
+  font-weight: 600;
+}
+.fv-path {
+  margin: 0;
+  font-family: var(--os-mono);
+}
+
+.fv-tree {
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface);
+  padding: 6px;
+}
+.fv-empty {
+  margin: 12px;
+}
+
+.fv-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 120px 84px;
+  align-items: center;
+  gap: 10px;
+  /* One indent step per level, applied as padding so the row's own hit target
+     stays full width — a narrower stop at depth 6 is a worse spatial target. */
+  padding: 8px 12px 8px calc(12px + var(--depth, 0) * 18px);
+  border: 0;
+  border-radius: var(--os-r-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.fv-row[data-kind='dir'] .fv-name {
+  font-weight: 600;
+}
+.fv-row[data-kind='file'] .fv-name {
+  color: var(--os-text-dim);
+}
+.fv-twisty {
+  color: var(--os-text-faint);
+  font-size: 11px;
+}
+.fv-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fv-bar {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--os-surface-3);
+  overflow: hidden;
+}
+.fv-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--os-accent);
+  opacity: 0.65;
+}
+.fv-size {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--os-text-dim);
+  font-size: 13px;
+}
+
+.fv-hint {
+  margin: 0;
+}
+.fv-hint kbd {
+  background: var(--os-surface-3);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font: 11px var(--os-mono);
+}

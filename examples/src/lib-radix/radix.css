@@ -1,0 +1,81 @@
+/* Radix primitives ship unstyled; this is the minimum to make the screen
+   legible on the dark example theme. Focus rings come from spatial-nav-css. */
+.rx-root { max-width: 860px; margin: 0 auto; display: grid; gap: 18px; }
+
+.rx-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  background: var(--panel); border-radius: 12px; padding: 16px 20px;
+}
+.rx-title { font-size: 18px; margin: 0; }
+.rx-muted { font-size: 12px; opacity: 0.6; margin: 4px 0 0; }
+
+.rx-tabs { display: grid; gap: 12px; }
+.rx-tablist { display: flex; gap: 8px; }
+.rx-tab {
+  background: var(--panel); border: 0; color: var(--text);
+  padding: 9px 18px; border-radius: 8px; font-size: 13px; cursor: pointer;
+}
+.rx-tab[data-state='active'] { background: var(--accent); color: #04121f; }
+
+.rx-panel {
+  background: var(--panel); border-radius: 12px; padding: 6px 20px 14px;
+  display: grid; gap: 2px;
+}
+/* Radix keeps inactive panels mounted and marks them [hidden]. Any `display`
+   rule on the panel outranks the UA's `[hidden] { display: none }`, so restate
+   it — the engine already skips them via the attribute, but the page would
+   otherwise show three stacked panels. */
+.rx-panel[hidden] { display: none; }
+.rx-panel:focus-visible { outline: none; }
+
+.rx-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.rx-row:last-child { border-bottom: 0; }
+.rx-row-text { display: grid; gap: 3px; }
+.rx-row-label { font-size: 13px; }
+.rx-row-hint { font-size: 11px; opacity: 0.55; }
+
+.rx-btn {
+  background: var(--panel-2); border: 0; color: var(--text);
+  padding: 8px 14px; border-radius: 7px; font-size: 13px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; min-width: 96px;
+  justify-content: space-between;
+}
+.rx-btn-danger { color: #ff9b9b; }
+
+.rx-switch {
+  width: 44px; height: 24px; border-radius: 12px; border: 0; padding: 2px;
+  background: var(--panel-2); cursor: pointer; flex: none;
+}
+.rx-switch[data-state='checked'] { background: var(--accent); }
+.rx-switch-thumb {
+  display: block; width: 20px; height: 20px; border-radius: 50%;
+  background: #e8eef4; transition: transform 120ms;
+}
+.rx-switch-thumb[data-state='checked'] { transform: translateX(20px); }
+
+.rx-overlay { position: fixed; inset: 0; background: rgba(4, 8, 12, 0.72); }
+.rx-dialog {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(420px, 90vw); background: var(--panel); border-radius: 12px;
+  padding: 20px 22px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+.rx-dialog-title { font-size: 15px; margin: 0 0 8px; }
+.rx-dialog-body { font-size: 12px; opacity: 0.7; line-height: 1.6; margin: 0 0 18px; }
+.rx-dialog-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+.rx-menu, .rx-listbox {
+  background: var(--panel-2); border-radius: 8px; padding: 4px; min-width: 160px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+.rx-menu-item, .rx-option {
+  padding: 8px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;
+  outline: none;
+}
+.rx-menu-item[data-highlighted], .rx-option[data-highlighted] { background: var(--accent); color: #04121f; }
+.rx-option[data-state='checked'] { font-weight: 600; }
+
+.rx-services { display: grid; }
+.rx-foot { font: 12px/1.6 ui-monospace, monospace; opacity: 0.7; }

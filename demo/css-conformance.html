@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CSS conformance — spatial-nav-css</title>
+<title>Browser integration smoke test — spatial-nav-css</title>
 <link rel="stylesheet" href="../css/spatial.css">
 <style>
   :root { color-scheme: dark; }
@@ -25,7 +25,7 @@
 </style>
 </head>
 <body>
-<h1>Real-browser CSS conformance — things jsdom cannot verify</h1>
+<h1>Real-browser integration smoke test — things jsdom cannot verify</h1>
 <p>Self-running. Each row exercises the cascade path the engine reads via
    <code>getComputedStyle</code>. JSON results in <code>window.__cssConformance</code>.</p>
 <table id="results"></table>
@@ -83,11 +83,27 @@
     probe.classList.remove('css-blocked')
     check('post-untoggle: direction unblocked', engine.findTarget('down', probe) !== null, true)
 
-    // 7. The shipped focus ring actually paints (computed outline ≠ none).
+    // 7. The shipped focus ring actually paints (computed outline ≠ none),
+    //    both from the class and from the attribute the engine mirrors it to.
+    //    The attribute is what survives a framework rewriting className.
     $('origin').classList.add('spatial-focused')
     const ring = getComputedStyle($('origin')).outlineStyle
     check('.spatial-focused outline paints', ring !== 'none' && ring !== '', true)
     $('origin').classList.remove('spatial-focused')
+
+    $('origin').setAttribute('data-spatial-focused', '')
+    const attrRing = getComputedStyle($('origin')).outlineStyle
+    check('[data-spatial-focused] outline paints', attrRing !== 'none' && attrRing !== '', true)
+    $('origin').removeAttribute('data-spatial-focused')
+
+    // …and the engine sets both when it moves focus, so a re-render that
+    // rewrites class still leaves a visible ring.
+    engine.focus($('origin'))
+    check('engine sets the durable focus attribute',
+      $('origin').hasAttribute('data-spatial-focused'), true)
+    $('origin').className = 'css-override css-blocked indirect mq' // framework rerender
+    check('ring survives a className rewrite',
+      getComputedStyle($('origin')).outlineStyle !== 'none', true)
 
     // 8. checkVisibility-backed visibility: visibility:hidden excluded even
     //    though it still has client rects.

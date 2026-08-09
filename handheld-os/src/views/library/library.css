@@ -1,0 +1,201 @@
+.lv-root {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 64px;
+  gap: var(--os-gap);
+  min-height: 0;
+  padding: 14px var(--os-pad);
+}
+
+/* ------------------------------------------------------------ filter rail */
+.lv-rail {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  overflow-y: auto;
+}
+.lv-search {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+.lv-search-label,
+.lv-rail-count {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--os-text-faint);
+}
+.lv-search-input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface-2);
+  color: var(--os-text);
+  font: inherit;
+  font-size: 14px;
+}
+.lv-filter {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.lv-filter-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--os-text-faint);
+}
+.lv-filter-value {
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--os-accent);
+}
+.lv-rail-count {
+  margin: 6px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------- the grid */
+.lv-grid {
+  position: relative;
+  min-width: 0;
+  overflow-y: auto;
+  /* The engine scrolls focus into view; leave room so a tile is never flush
+     against the top edge when it lands. */
+  scroll-padding-block: 24px;
+}
+.lv-grid-total {
+  position: relative;
+  width: 100%;
+}
+.lv-row {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  padding-bottom: 12px;
+}
+.lv-tile {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 0 0 10px;
+  border: 0;
+  border-radius: var(--os-r-md);
+  overflow: hidden;
+  background: var(--os-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.lv-tile-art {
+  position: relative;
+  display: block;
+  height: 124px;
+  background: linear-gradient(155deg, hsl(var(--hue, 210) 52% 34%), hsl(var(--hue, 210) 44% 15%));
+}
+.lv-compat {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.55);
+  font-size: 11px;
+  font-weight: 700;
+}
+.lv-compat.is-verified {
+  color: var(--os-compat-verified);
+}
+.lv-compat.is-playable {
+  color: var(--os-compat-playable);
+}
+.lv-compat.is-unsupported {
+  color: var(--os-compat-unsupported);
+}
+.lv-compat.is-unknown {
+  color: var(--os-text-faint);
+}
+.lv-tile-title {
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.lv-tile-meta {
+  padding: 0 10px;
+  font-size: 11px;
+  color: var(--os-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.lv-empty {
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  gap: 14px;
+  padding: 40px 4px;
+  color: var(--os-text-dim);
+}
+
+/* ----------------------------------------------------------- section rail */
+.lv-sections {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.lv-sections::-webkit-scrollbar {
+  display: none;
+}
+.lv-letter {
+  padding: 5px 0;
+  border: 0;
+  border-radius: var(--os-r-sm);
+  background: transparent;
+  color: var(--os-text-faint);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 100ms ease, background 100ms ease;
+}
+.lv-letter[aria-current='true'] {
+  background: var(--os-surface-3);
+  color: var(--os-accent);
+}
+
+/*
+ * The hold read-out. `data-stage` mirrors useFastScroll's escalation, so the
+ * rail is the one place the user can see that the D-pad has gone from walking
+ * to striding to jumping by letter.
+ */
+.lv-sections[data-stage='stride'] .lv-letter[aria-current='true'] {
+  background: var(--os-surface-3);
+  color: var(--os-text);
+}
+.lv-sections[data-stage='section'] {
+  background: rgb(89 176 255 / 0.08);
+  border-radius: var(--os-r-md);
+}
+.lv-sections[data-stage='section'] .lv-letter[aria-current='true'] {
+  background: var(--os-accent-strong);
+  color: #05121d;
+}

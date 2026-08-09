@@ -1,0 +1,213 @@
+.sv-root {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px var(--os-pad) var(--os-pad);
+  min-height: 0;
+}
+
+/* ------------------------------------------------------------------ head */
+.sv-head {
+  display: grid;
+  gap: 10px;
+}
+.sv-drives {
+  display: flex;
+  gap: 10px;
+}
+.sv-drive {
+  display: grid;
+  gap: 2px;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sv-drive[aria-pressed='true'] {
+  background: var(--os-surface-3);
+  box-shadow: inset 3px 0 0 var(--os-accent);
+}
+.sv-drive strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.sv-drive small {
+  font-size: 11px;
+  color: var(--os-text-faint);
+}
+.sv-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.sv-crumb {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--os-r-sm);
+  background: transparent;
+  color: var(--os-text-dim);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.sv-crumb + .sv-crumb::before {
+  content: '›';
+  margin-right: 10px;
+  color: var(--os-text-faint);
+}
+.sv-crumb[aria-current='true'] {
+  color: var(--os-text);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------- map */
+.sv-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 288px;
+  gap: 14px;
+  min-height: 0;
+}
+.sv-map {
+  position: relative;
+  min-height: 0;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface);
+  overflow: hidden;
+}
+.sv-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  margin: 0;
+}
+
+/*
+ * Blocks tile the map exactly, so separation is drawn *inside* the box with an
+ * inset shadow rather than with a border or a margin. The rect the engine
+ * measures has to stay the rect the layout computed — a 1px margin on a 40px
+ * block is a 5% lie about where its neighbour begins.
+ */
+.sv-block {
+  position: absolute;
+  display: block;
+  overflow: hidden;
+  padding: 6px 8px;
+  border: 0;
+  background: var(--block-bg);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.45);
+  color: var(--os-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  --block-tint: calc(var(--i, 0) * 4deg);
+}
+.sv-block[data-category='game'] {
+  --block-bg: hsl(calc(206deg + var(--block-tint)) 46% 34%);
+}
+.sv-block[data-category='system'] {
+  --block-bg: hsl(calc(272deg + var(--block-tint)) 30% 34%);
+}
+.sv-block[data-category='data'] {
+  --block-bg: hsl(calc(168deg + var(--block-tint)) 32% 30%);
+}
+.sv-block[data-category='other'] {
+  --block-bg: var(--os-surface-3);
+}
+.sv-block[data-category='free'] {
+  --block-bg: repeating-linear-gradient(
+    135deg,
+    #101820,
+    #101820 8px,
+    #14202a 8px,
+    #14202a 16px
+  );
+  color: var(--os-text-faint);
+}
+.sv-block[data-selected] {
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.55);
+}
+/* The ring must sit above neighbouring blocks, which are siblings painted after. */
+.sv-block[data-spatial-focused] {
+  z-index: 2;
+}
+.sv-block-label {
+  display: grid;
+  gap: 2px;
+  pointer-events: none;
+}
+.sv-block-name {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sv-block-size {
+  font-size: 11px;
+  color: rgb(255 255 255 / 0.72);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----------------------------------------------------------------- panel */
+.sv-panel {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface);
+  overflow-y: auto;
+}
+.sv-panel-kicker {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--os-text-faint);
+}
+.sv-panel-name {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.sv-panel-facts {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 4px;
+}
+.sv-panel-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+.sv-panel-facts dt {
+  color: var(--os-text-faint);
+}
+.sv-panel-facts dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.sv-panel-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+.sv-panel-hint {
+  margin: 6px 0 0;
+}
+.sv-panel-hint kbd {
+  background: var(--os-surface-3);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font: 11px var(--os-mono);
+}

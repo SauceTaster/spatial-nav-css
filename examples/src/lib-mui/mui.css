@@ -1,0 +1,44 @@
+/*
+ * Focus composition for MUI.
+ *
+ * The engine marks the focused element two ways — a `.spatial-focused` class
+ * and a `[data-spatial-focused]` attribute. Everything below keys off the
+ * attribute: emotion re-serializes `className` on every re-render, so a
+ * class-based rule can be dropped out from under the engine, while nothing
+ * rewrites the data attribute.
+ *
+ * MUI keeps painting its own `.Mui-focusVisible` for pointer/keyboard focus;
+ * these rules sit alongside it rather than replacing it.
+ */
+
+/* Switch and Checkbox focus lands on the visually hidden <input> that covers
+   the control, so the ring would be invisible-ish and square. Hoist it to the
+   wrapper MUI actually styles. */
+.mui-root .MuiButtonBase-root:has(> [data-spatial-focused]) {
+  outline: var(--spatial-focus-ring-width) solid var(--spatial-focus-ring-color);
+  outline-offset: -2px;
+}
+.mui-root .MuiSwitch-input[data-spatial-focused],
+.mui-root .PrivateSwitchBase-input[data-spatial-focused] {
+  outline: none;
+}
+
+/* Rounded controls: match the ring to MUI's own radius instead of the square
+   default outline. */
+.mui-root .MuiButton-root[data-spatial-focused],
+.mui-root .MuiOutlinedInput-input[data-spatial-focused] {
+  border-radius: var(--mui-shape-borderRadius, 10px);
+}
+
+/* Portaled surfaces live outside .mui-root, so they are scoped by MUI's own
+   class names instead. */
+.MuiMenu-list [data-spatial-focused],
+.MuiDialog-paper [data-spatial-focused] {
+  outline-offset: -3px;
+}
+
+/* A contained overlay is where the ring matters most — make the surface read
+   as the active layer. */
+.MuiDialog-paper[data-spatial-container] {
+  box-shadow: 0 0 0 1px rgba(26, 159, 255, 0.35), 0 24px 60px rgba(0, 0, 0, 0.6);
+}

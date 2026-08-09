@@ -7,7 +7,7 @@
    - v-focusable directive shorthand on native buttons
    - EXCLUSION gotcha: a plain element with no directive is skipped; an
      <input tabindex="-1"> is skipped even though inputs are native stops
-   - autoRestoreFocus: activating a card removes it; focus lands on a neighbor
+   - autoRestoreFocus: activating a card removes it; the documented fallback chain restores focus
 -->
 <script setup lang="ts">
 import { ref } from 'vue'

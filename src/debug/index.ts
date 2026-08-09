@@ -1,21 +1,31 @@
 /**
- * Visual debug overlay — see the engine's world the way it does.
+ * Visual debug overlay — an approximate view of the engine's DOM inputs.
  *
  * Paints outlines over every focusable (cyan), every spatial container
  * (dashed orange, with its tokens), and the current focus (red), refreshing
- * on focus changes, scroll, and resize. The lesson is straight from
- * Norigin's production `visualDebug` mode; this one draws with plain
- * positioned divs so it works everywhere, stays inspectable in devtools,
- * and never intercepts input (pointer-events: none).
+ * on focus changes, scroll, and resize. It draws with plain positioned divs,
+ * stays inspectable in devtools, and does not intercept pointer input
+ * (`pointer-events: none`).
  *
  *   import { attachDebugOverlay } from 'spatial-nav-css/debug'
- *   const detach = attachDebugOverlay(nav)   // or attachDebugOverlay(engine)
- *   detach()                                 // remove everything
+ *   const overlay = attachDebugOverlay(nav)  // or attachDebugOverlay(engine)
+ *   overlay.refresh()                        // repaint after a layout change
+ *   overlay.detach()                         // remove everything
+ *
+ * Container outlines use their own DOM boxes rather than the engine's unioned
+ * zone-scoring rects. Focusables use DOM geometry and the default visibility
+ * check unless matching options are passed, so injected engine callbacks are
+ * not reflected automatically.
  *
  * Dev-only by design: ~1 absolutely-positioned div per focusable per refresh.
  */
 import type { SpatialEngine } from '../core/engine'
-import { DEFAULT_FOCUSABLE_SELECTOR, getFocusables, isElementVisible } from '../core/dom'
+import {
+  DEFAULT_FOCUSABLE_SELECTOR,
+  getFocusables,
+  isElementVisible,
+  isHTMLElementNode,
+} from '../core/dom'
 import { readNavConfig } from '../core/config'
 
 export interface DebugOverlayOptions {
@@ -23,7 +33,7 @@ export interface DebugOverlayOptions {
   focusableSelector?: string
   /** Show index/token labels. Default true. */
   labels?: boolean
-  /** Treat everything as visible (matches engines with injected filters). */
+  /** Skip the default visibility check (for an engine configured the same way). */
   assumeVisible?: boolean
 }
 
@@ -56,21 +66,32 @@ export function attachDebugOverlay(
   const root = engine.root
   const doc = root.nodeType === 9 ? (root as Document) : (root as HTMLElement).ownerDocument
   const win = doc.defaultView
+  if (!doc.body) throw new Error('attachDebugOverlay() requires document.body')
   const selector = options.focusableSelector ?? DEFAULT_FOCUSABLE_SELECTOR
+  // Validate before any side effect: a malformed selector must not leave the
+  // layer or listeners attached with no handle to detach them.
+  try {
+    doc.querySelector(selector)
+  } catch {
+    throw new TypeError('DebugOverlayOptions.focusableSelector must be a valid CSS selector')
+  }
   const showLabels = options.labels ?? true
   const visible = options.assumeVisible ? () => true : isElementVisible
 
   const layer = doc.createElement('div')
   layer.setAttribute('data-spatial-debug-overlay', '')
+  layer.setAttribute('aria-hidden', 'true')
+  layer.setAttribute('inert', '')
   layer.style.cssText =
     'position: fixed; inset: 0; pointer-events: none; z-index: 2147483646; overflow: visible;'
   doc.body.appendChild(layer)
 
-  const box = (rect: DOMRect, css: string, label?: string): void => {
+  const box = (rect: DOMRect, css: string, label?: string, isFocused = false): void => {
     const el = doc.createElement('div')
     el.style.cssText =
       `position: absolute; left: ${rect.left}px; top: ${rect.top}px; ` +
       `width: ${rect.width}px; height: ${rect.height}px; box-sizing: border-box; ${css}`
+    if (isFocused) el.setAttribute('data-spatial-debug-focused', '')
     if (label && showLabels) {
       const tag = doc.createElement('span')
       tag.style.cssText = STYLE.label
@@ -85,8 +106,11 @@ export function attachDebugOverlay(
     const scope: ParentNode = root
     const focused = engine.getFocused()
 
-    for (const container of scope.querySelectorAll<HTMLElement>('[data-spatial-container]')) {
+    const containers = [...scope.querySelectorAll('*')].filter(isHTMLElementNode)
+    if (isHTMLElementNode(root)) containers.unshift(root)
+    for (const container of containers) {
       const config = readNavConfig(container)
+      if (!config.isContainer) continue
       const tokens = [config.trap && 'contain', config.wrap && 'wrap', config.remember && 'remember']
         .filter(Boolean)
         .join(' ')
@@ -96,12 +120,20 @@ export function attachDebugOverlay(
     const focusables = getFocusables(scope, selector, visible)
     focusables.forEach((el, index) => {
       const isFocused = el === focused
-      box(el.getBoundingClientRect(), isFocused ? STYLE.focused : STYLE.focusable, `${index}`)
+      box(el.getBoundingClientRect(), isFocused ? STYLE.focused : STYLE.focusable, `${index}`, isFocused)
     })
+
+    // Programmatic focus may intentionally target an element outside the
+    // configured focusable selector. Keep that current engine target visible
+    // without pretending it belongs to the indexed focusable set.
+    if (focused && !focusables.includes(focused)) {
+      box(focused.getBoundingClientRect(), STYLE.focused, 'current', true)
+    }
   }
 
   const onMutate = (): void => refresh()
   doc.addEventListener('spatial:focus', onMutate)
+  doc.addEventListener('focusin', onMutate)
   win?.addEventListener('resize', onMutate)
   win?.addEventListener('scroll', onMutate, { capture: true, passive: true })
   refresh()
@@ -110,6 +142,7 @@ export function attachDebugOverlay(
     refresh,
     detach() {
       doc.removeEventListener('spatial:focus', onMutate)
+      doc.removeEventListener('focusin', onMutate)
       win?.removeEventListener('resize', onMutate)
       win?.removeEventListener('scroll', onMutate, { capture: true })
       layer.remove()

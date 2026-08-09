@@ -6,7 +6,17 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["src/**", "tests/**", "bench/**", "scripts/**", "*.json", "*.ts", "css/**", "demo/**"]
+    "includes": [
+      "src/**",
+      "tests/**",
+      "browser-tests/**",
+      "bench/**",
+      "scripts/**",
+      "*.json",
+      "*.ts",
+      "css/**",
+      "demo/**"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -69,7 +79,7 @@
       }
     },
     {
-      "includes": ["tests/**"],
+      "includes": ["tests/**", "browser-tests/**"],
       "linter": {
         "rules": {
           "suspicious": {

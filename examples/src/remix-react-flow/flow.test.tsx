@@ -47,14 +47,14 @@ async function mount(): Promise<SpatialNavigation> {
 afterEach(cleanup)
 
 describe('react-flow example', () => {
-  it('renders custom nodes as single data-focusable stops', async () => {
+  it('renders each custom node as one native button stop', async () => {
     await mount()
     for (const id of ['node-1', 'node-2', 'node-3', 'node-4']) {
-      expect(document.getElementById(id)).toHaveAttribute('data-focusable')
+      expect(document.getElementById(id)?.tagName).toBe('BUTTON')
     }
   })
 
-  it('navigates across transformed nodes by on-screen geometry', async () => {
+  it('navigates across the injected browser-layout fixture', async () => {
     const nav = await mount()
     act(() => void nav.focus('#node-2'))
     act(() => void nav.navigate('right'))

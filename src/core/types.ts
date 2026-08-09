@@ -28,22 +28,24 @@ export interface ScoringOptions {
   orthogonalWeight: number
   /**
    * Weight of the center-to-center orthogonal offset, used as a "most in
-   * line" tie-break. Kept well below 1 so it orders near-equals without
-   * letting a wide zone's off-center mass beat genuine proximity.
+   * line" tie-break. Kept well below 1 so displaced centers influence the
+   * result less than the primary distance terms in ordinary layouts.
    */
   centerWeight: number
   /**
    * Minimum orthogonal overlap — as a fraction of the origin's extent on
    * that axis — for a candidate to count as "aligned" (same row/column).
    * A 1px sliver overlap should not grant same-row priority over a near
-   * diagonal neighbor; 0.2 matches the adjacent-slice threshold proven in
-   * production TV apps (Norigin). Set 0 for any-overlap alignment.
+   * diagonal neighbor; 0.2 requires a meaningful overlap with the origin's
+   * projected span. Set 0 for any-overlap alignment. Engine options accept a
+   * finite value from 0 through 1.
    */
   alignedOverlapRatio: number
   /**
    * Flat penalty added to candidates whose projection on the orthogonal
    * axis does not overlap the origin at all (i.e. not in the same
-   * row/column). Large by default so aligned candidates always win.
+   * row/column). Large by default so aligned candidates dominate ordinary
+   * viewport-scale layouts.
    */
   misalignedPenalty: number
 }

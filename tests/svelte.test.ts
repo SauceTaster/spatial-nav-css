@@ -62,6 +62,41 @@ describe('svelte adapter', () => {
     destroy()
   })
 
+  it('focused store follows native focus changes and focused-node removal', async () => {
+    document.body.innerHTML = `<button id="a"></button><button id="b"></button>`
+    const { focused, destroy } = createSpatialNav(testOptions)
+    const seen: Array<string | null> = []
+    const unsubscribe = focused.subscribe((el) => seen.push(el?.id ?? null))
+
+    document.getElementById('a')!.focus()
+    document.getElementById('b')!.focus()
+
+    expect(seen).toEqual([null, 'a', 'b'])
+    document.getElementById('b')!.remove()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(seen.at(-1)).toBeNull()
+    unsubscribe()
+    destroy()
+  })
+
+  it('focusable action preserves declarative attributes it did not set', () => {
+    // Regression: applyParams removed every direction attribute without a
+    // param, wiping routes declared directly in the markup.
+    const node = document.createElement('div')
+    node.setAttribute('data-nav-up', '#header')
+    node.setAttribute('data-spatial-autofocus', '')
+    const action = focusable(node, { navRight: '#next' })
+    expect(node.getAttribute('data-nav-up')).toBe('#header')
+    expect(node.hasAttribute('data-spatial-autofocus')).toBe(true)
+
+    action.update?.({})
+    expect(node.getAttribute('data-nav-up')).toBe('#header')
+
+    action.destroy?.()
+    expect(node.getAttribute('data-nav-up')).toBe('#header')
+    expect(node.hasAttribute('data-nav-right')).toBe(false)
+  })
+
   it('focusedStore stops emitting after unsubscribe', () => {
     document.body.innerHTML = `<button id="a"></button>`
     const { nav, destroy } = createSpatialNav(testOptions)

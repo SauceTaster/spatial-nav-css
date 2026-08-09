@@ -1,0 +1,55 @@
+{
+  "name": "handheld-os",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A gamepad-first handheld gaming OS shell built on spatial-nav-css. Runs as a standalone app; also the library's most demanding integration test.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "storybook": "storybook dev -p 6006 --no-open",
+    "build:storybook": "storybook build",
+    "ci": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "1.1.23",
+    "@tanstack/react-query": "5.101.4",
+    "@tanstack/react-table": "8.21.3",
+    "@tanstack/react-virtual": "3.14.9",
+    "clsx": "2.1.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "5.0.14"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "10.5.6",
+    "@storybook/addon-docs": "10.5.6",
+    "@storybook/react-vite": "10.5.6",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^29.0.1",
+    "msw": "2.15.0",
+    "storybook": "10.5.6",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "vitest": "^4.1.10"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  },
+  "allowScripts": {
+    "msw@2.15.0": true,
+    "esbuild@0.28.1": true
+  }
+}

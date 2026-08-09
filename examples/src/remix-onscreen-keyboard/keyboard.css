@@ -1,0 +1,44 @@
+/* TV search chrome: readout, contained key grid, results rail. The bottom-row
+   spans mirror the test's layout map (CLEAR 2 columns, SPACE 6, ⌫ 2) so the
+   page and the test describe the same geometry. */
+#app { max-width: 640px; margin: 0 auto; display: grid; gap: 16px; }
+
+.search-query {
+  min-height: 54px; display: flex; align-items: center; padding: 0 18px;
+  background: var(--panel); border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+  font-size: 20px; letter-spacing: 0.5px;
+}
+.search-value { white-space: pre; } /* trailing spaces are real input */
+.search-query[data-empty='true'] .search-value::before {
+  content: 'Search films'; opacity: 0.3;
+}
+.search-caret {
+  width: 2px; height: 24px; margin-left: 3px; background: var(--accent);
+  animation: caret-blink 1.1s steps(1) infinite;
+}
+@keyframes caret-blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .search-caret { animation: none; } }
+
+.kb-grid {
+  display: grid; gap: 8px; padding: 14px; border-radius: 12px;
+  background: var(--panel); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+}
+.kb-row { display: flex; justify-content: center; gap: 8px; }
+.kb-key {
+  flex: 0 0 44px; min-height: 44px; border: 0; border-radius: 8px;
+  background: var(--panel-2); color: var(--text); font: inherit; font-size: 15px;
+  text-transform: uppercase; cursor: pointer;
+}
+.kb-key-action { font-size: 11px; letter-spacing: 1px; opacity: 0.85; }
+.kb-key-wide-2 { flex-basis: calc(44px * 2 + 8px); }
+.kb-key-wide-6 { flex-basis: calc(44px * 6 + 8px * 5); }
+
+.results-rail { display: flex; gap: 10px; overflow-x: auto; min-height: 92px; padding: 2px; }
+.result {
+  flex: 0 0 150px; height: 84px; border: 0; border-radius: 8px; padding: 10px;
+  display: grid; align-content: end; text-align: left; font: inherit; font-size: 13px;
+  color: var(--text); cursor: pointer;
+  background: linear-gradient(160deg, var(--panel-2), var(--panel));
+}
+.results-empty { margin: auto 0; font-size: 13px; opacity: 0.5; }

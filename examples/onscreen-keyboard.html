@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>On-screen keyboard — spatial-nav-css</title>
+</head>
+<body>
+<div class="ex-head">
+  <a class="back" href="/">← all examples</a>
+  <h1><span class="lib">⌨️ On-screen keyboard</span> — the classic TV search pattern</h1>
+  <p>A contained QWERTY grid drives a live search. <kbd>←→</kbd> wrap at the row edges, and focus
+     never falls out of the keyboard by geometry — its only doors are explicit routes: <kbd>↑</kbd>
+     from the top row and <kbd>↓</kbd> from the bottom row jump to the results rail, <kbd>↑</kbd>
+     from a result lands back on the wide SPACE key (one stop, reachable from every key above it).
+     A short <kbd>Enter</kbd> on ⌫ deletes one character; holding it ≥ 600 ms clears the query.</p>
+</div>
+<div id="app"></div>
+<script type="module" src="/src/remix-onscreen-keyboard/main.ts"></script>
+</body>
+</html>

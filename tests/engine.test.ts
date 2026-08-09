@@ -134,6 +134,110 @@ describe('containers', () => {
     expect(engine.getFocused()?.id).toBe('below')
   })
 
+  it('does not wrap orthogonally when wrap-row items are slightly misaligned', () => {
+    // Regression: the wrap guard accepted the loose 'overlapping' direction
+    // tier, so a same-row sibling sitting a few pixels off-axis (baseline
+    // alignment, mixed card heights) counted as "behind us" for an
+    // orthogonal press and "down" wrapped sideways instead of exiting.
+    const html = `<div id="row" data-spatial-container="wrap">
+        <button id="r1"></button><button id="r2"></button>
+      </div>
+      <button id="above"></button>
+      <button id="below"></button>`
+    const layout: LayoutMap = {
+      row: [0, 100, 210, 90],
+      r1: [0, 100, 80, 80],
+      r2: [110, 105, 80, 80], // 5px lower than r1
+      above: [0, 0, 80, 80],
+      below: [0, 300, 80, 80],
+    }
+
+    let engine = makeEngine(html, layout)
+    engine.focus(document.getElementById('r2')!)
+    expect(engine.navigate('down')).toBe(true)
+    expect(engine.getFocused()?.id).toBe('below')
+
+    engine = makeEngine(html, layout)
+    engine.focus(document.getElementById('r1')!)
+    expect(engine.navigate('up')).toBe(true)
+    expect(engine.getFocused()?.id).toBe('above')
+
+    // The row-axis wrap itself must still engage despite the misalignment.
+    engine = makeEngine(html, layout)
+    engine.focus(document.getElementById('r2')!)
+    expect(engine.navigate('right')).toBe(true)
+    expect(engine.getFocused()?.id).toBe('r1')
+  })
+
+  it('contain wrap keeps orthogonal presses at rest instead of shuffling sideways', () => {
+    const engine = makeEngine(
+      `<div id="row" data-spatial-container="contain wrap">
+         <button id="r1"></button><button id="r2"></button>
+       </div>
+       <button id="below"></button>`,
+      {
+        row: [0, 0, 210, 90],
+        r1: [0, 0, 80, 80],
+        r2: [110, 5, 80, 80],
+        below: [0, 300, 80, 80],
+      },
+    )
+    engine.focus(document.getElementById('r2')!)
+    expect(engine.navigate('down')).toBe(false)
+    expect(engine.getFocused()?.id).toBe('r2')
+  })
+
+  it('leaves a mixed-width grid instead of moving diagonally at the row edge', () => {
+    // Regression, from an inventory UI: a 2-cell-wide item sits above a
+    // 1-cell item sharing its left edge. Pressing left from the wide item
+    // used to drop diagonally onto the narrow one below (its center was
+    // marginally further left) instead of escaping the grid to the sidebar.
+    const engine = makeEngine(
+      `<nav id="menu"><button id="m1"></button></nav>
+       <div id="bag" data-spatial-container>
+         <button id="wide"></button><button id="right"></button>
+         <button id="below"></button>
+       </div>`,
+      {
+        menu: [40, 100, 200, 60],
+        m1: [40, 100, 200, 44],
+        bag: [340, 100, 400, 200],
+        wide: [340, 100, 188, 60], // spans two cells
+        right: [536, 100, 90, 60],
+        below: [340, 168, 90, 60], // same left edge, one row down
+      },
+    )
+    engine.focus(document.getElementById('wide')!)
+    expect(engine.navigate('left')).toBe(true)
+    expect(engine.getFocused()?.id).toBe('m1')
+  })
+
+  it('ignores a collapsed focusable when sizing a zone', () => {
+    // Regression: one 0x0 focusable inside a container — an offscreen focus
+    // guard, a chart library's tabbable <svg> before it measures — reports a
+    // rect at the viewport origin, and unioning it stretched the zone all
+    // the way up to (0,0). Every zone-level score then shifted: "down" from
+    // the header skipped the panel entirely and landed two zones away.
+    const engine = makeEngine(
+      `<button id="header"></button>
+       <div id="panel" data-spatial-container>
+         <span id="ghost" tabindex="0"></span>
+         <button id="inside"></button>
+       </div>
+       <button id="far"></button>`,
+      {
+        header: [0, 0, 400, 60],
+        panel: [0, 200, 400, 120],
+        ghost: [0, 0, 0, 0], // collapsed: no layout yet
+        inside: [0, 200, 200, 60],
+        far: [0, 600, 400, 60],
+      },
+    )
+    engine.focus(document.getElementById('header')!)
+    expect(engine.navigate('down')).toBe(true)
+    expect(engine.getFocused()?.id).toBe('inside')
+  })
+
   it('escalates out of a non-trapping container', () => {
     const engine = makeEngine(
       `<div data-spatial-container>
@@ -292,6 +396,28 @@ describe('focus lifecycle', () => {
     engine.navigate('right')
     expect(document.getElementById('a')!.classList.contains('spatial-focused')).toBe(false)
     expect(document.getElementById('b')!.classList.contains('spatial-focused')).toBe(true)
+  })
+
+  it('mirrors the focus decoration in an attribute frameworks do not manage', () => {
+    // Regression: a framework rendering className rewrites the class
+    // attribute on its next render and silently erased the focus ring. The
+    // attribute survives that, so the shipped stylesheet still matches.
+    const engine = makeEngine(GRID, GRID_LAYOUT)
+    const a = document.getElementById('a')!
+    const b = document.getElementById('b')!
+    engine.focus(a)
+    expect(a.hasAttribute('data-spatial-focused')).toBe(true)
+
+    // Simulate React/Vue/Svelte reconciling `class` from their own state.
+    a.className = 'card is-focused'
+    expect(a.hasAttribute('data-spatial-focused')).toBe(true)
+
+    engine.navigate('right')
+    expect(a.hasAttribute('data-spatial-focused')).toBe(false)
+    expect(b.hasAttribute('data-spatial-focused')).toBe(true)
+
+    engine.destroy()
+    expect(b.hasAttribute('data-spatial-focused')).toBe(false)
   })
 
   it('gives data-focusable elements a tabindex so they hold real focus', () => {

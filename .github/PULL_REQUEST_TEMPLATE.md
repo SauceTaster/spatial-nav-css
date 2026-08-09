@@ -8,3 +8,4 @@
 - [ ] Behavior changes have a test (engine changes: rect-driven test in `tests/`)
 - [ ] Edge-case behavior changes update [docs/edge-cases.md](../docs/edge-cases.md)
 - [ ] User-facing change has a changeset (`npx changeset`)
+- [ ] I have the right to submit this work under MIT; third-party sources and required notices are disclosed

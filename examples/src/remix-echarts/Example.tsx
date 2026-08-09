@@ -11,7 +11,7 @@
  * (and the jsdom test can mount it without a canvas 2d context).
  */
 import { useEffect, useRef, useState } from 'react'
-import * as echarts from 'echarts'
+import { init, type EChartsType } from 'echarts/core'
 
 const CATEGORIES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const SERIES = {
@@ -21,30 +21,38 @@ const SERIES = {
 
 export function EchartsExample() {
   const elRef = useRef<HTMLDivElement | null>(null)
-  const chartRef = useRef<echarts.ECharts | null>(null)
+  const chartRef = useRef<EChartsType | null>(null)
   const [active, setActive] = useState(0)
 
   useEffect(() => {
     if (!elRef.current) return
     // ECharts (zrender) measures text through a canvas 2d context even in SVG
     // mode. Environments without one (jsdom) can't render — skip init there;
-    // the focusable controls below still work. Real browsers always pass this.
+    // the focusable controls below still work. Browser support is checked at runtime.
     if (!document.createElement('canvas').getContext?.('2d')) return
-    let chart: echarts.ECharts | null = null
-    try {
-      chart = echarts.init(elRef.current, undefined, { renderer: 'svg', width: 560, height: 240 })
-      chart.setOption({
-        tooltip: {},
-        legend: { data: Object.keys(SERIES), textStyle: { color: '#c7d5e0' } },
-        xAxis: { type: 'category', data: CATEGORIES, axisLabel: { color: '#c7d5e0' } },
-        yAxis: { type: 'value', axisLabel: { color: '#c7d5e0' } },
-        series: Object.entries(SERIES).map(([name, data]) => ({ name, type: 'bar', data })),
+    let disposed = false
+    let chart: EChartsType | null = null
+    void import('./modules')
+      .then(({ registerEChartsModules }) => {
+        if (disposed || !elRef.current) return
+        registerEChartsModules()
+        chart = init(elRef.current, undefined, { renderer: 'svg', width: 560, height: 240 })
+        chart.setOption({
+          tooltip: {},
+          legend: { data: Object.keys(SERIES), textStyle: { color: '#c7d5e0' } },
+          xAxis: { type: 'category', data: CATEGORIES, axisLabel: { color: '#c7d5e0' } },
+          yAxis: { type: 'value', axisLabel: { color: '#c7d5e0' } },
+          series: Object.entries(SERIES).map(([name, data]) => ({ name, type: 'bar', data })),
+        })
+        chartRef.current = chart
       })
-      chartRef.current = chart
-    } catch {
-      // jsdom / no-layout environments: the controls below still work.
+      .catch(() => {
+        // jsdom / no-layout environments: the controls below still work.
+      })
+    return () => {
+      disposed = true
+      chart?.dispose()
     }
-    return () => chart?.dispose()
   }, [])
 
   // Drive the chart from spatial focus: highlight the active bar.

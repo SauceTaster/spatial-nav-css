@@ -1,0 +1,132 @@
+.gl-root {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 18px;
+  min-height: 78vh;
+}
+.gl-head h1 {
+  margin: 0;
+  font-size: 20px;
+}
+.gl-muted {
+  margin: 2px 0 0;
+  font-size: 12px;
+  opacity: 0.62;
+}
+.gl-body {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
+}
+.gl-rail {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.gl-rail-heading {
+  margin: 10px 0 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.45;
+}
+.gl-filter {
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #18202b;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+.gl-filter.is-active {
+  background: #1f3242;
+  box-shadow: inset 2px 0 0 #1a9fff;
+}
+.gl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+.gl-card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 0 0 10px;
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #131a24;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.gl-card-art {
+  display: block;
+  height: 92px;
+  background: linear-gradient(160deg, hsl(var(--hue, 210) 55% 32%), hsl(var(--hue, 210) 45% 16%));
+}
+.gl-card-title {
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.gl-card-meta {
+  padding: 0 10px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+.gl-card-skeleton {
+  height: 150px;
+  background: linear-gradient(100deg, #131a24, #1b2531, #131a24);
+}
+.gl-detail {
+  width: 260px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #131a24;
+}
+.gl-detail-title {
+  margin: 0;
+  font-size: 16px;
+}
+.gl-stats {
+  display: flex;
+  gap: 22px;
+  margin: 14px 0;
+}
+.gl-stats dt {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+}
+.gl-stats dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+}
+.gl-detail-actions {
+  display: grid;
+  gap: 8px;
+}
+.gl-detail-actions button,
+.gl-primary {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #1d2836;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+.gl-primary {
+  background: #1a9fff;
+  color: #04121d;
+  font-weight: 600;
+}
+.gl-foot {
+  font-size: 12px;
+  opacity: 0.55;
+}

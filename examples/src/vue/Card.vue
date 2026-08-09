@@ -5,11 +5,11 @@ const props = defineProps<{ id: string; label: string }>()
 const emit = defineEmits<{ remove: [] }>()
 
 // useFocusable marks the bound element a stop and tracks reactive focus state.
-const { elRef, focused } = useFocusable({ onActivate: () => emit('remove') })
+const { elRef, focused } = useFocusable()
 </script>
 
 <template>
-  <button ref="elRef" :id="props.id" class="tile" :data-focused="String(focused)">
+  <button ref="elRef" :id="props.id" class="tile" :data-focused="String(focused)" @click="emit('remove')">
     {{ props.label }}
     <span class="tag">{{ focused ? '◉ focused — Enter removes' : 'card' }}</span>
   </button>

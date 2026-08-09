@@ -42,4 +42,4 @@ body:
     id: env
     attributes:
       label: Environment
-      placeholder: Chrome 132 / Steam Deck, Xbox controller via Gamepad API
+      placeholder: Browser + version / OS or host / controller or remote mapping

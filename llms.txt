@@ -1,0 +1,69 @@
+# spatial-nav-css
+
+> Spatial (directional) focus navigation for web UIs: arrow keys, gamepads, and
+> TV remotes move real DOM focus to whatever is visually up, down, left, or
+> right. Per-element behavior is declared in CSS custom properties or data
+> attributes — no JS wiring per element. Zero runtime dependencies, MIT
+> licensed, ESM + CJS, TypeScript types included. Inspired by Valve's Panorama
+> UI and the W3C CSS Spatial Navigation Level 1 draft (not a polyfill).
+
+Facts that matter when generating code against this library:
+
+- Package name: `spatial-nav-css`. Core entry: `createSpatialNavigation(options)`
+  returns `{ start, stop, destroy, navigate, focus, focusFirst, getFocused,
+  activate, addAdapter, removeAdapter, engine }`. Call `start()` once at app
+  mount; `import 'spatial-nav-css/css'` for the focus ring and `@property`
+  registrations.
+- Subpath exports: `/react` (SpatialNavigationProvider, useFocusable,
+  SpatialContainer, useSpatialNavigation, useSpatialEvent), `/vue` (plugin +
+  composables + directives), `/svelte` (store + actions), `/react-aria`
+  (roving-tabindex interop), `/elements` (`<spatial-nav>` web components),
+  `/virtual` (virtualized-list helper), `/dialogs` (spatialAlert /
+  spatialConfirm), `/debug` (overlay), `/css` (stylesheet).
+- Declarative config on elements: `--nav-up/-down/-left/-right: "<selector>" | none`
+  (or `data-nav-*`) for explicit routes; `--spatial-container: contain wrap remember`
+  (or `data-spatial-container`) for focus groups; `--spatial-default-focus: auto`
+  (or `data-spatial-autofocus`) for a container's initial focus. Data
+  attributes override the CSS forms and work without `@property` support.
+- Anything matching the default focusable selector (links, enabled form
+  controls, `[tabindex]`, media with controls, …) participates; add
+  `data-focusable` to make a plain element a spatial stop.
+- The engine emits bubbling, composed DOM CustomEvents: `spatial:beforefocus`
+  (cancelable), `spatial:focus`, `spatial:nofocustarget`, `spatial:activate`
+  (cancelable), `spatial:activaterelease` (`detail.durationMs` for
+  long-press), `spatial:activatecancel`, `spatial:back` (cancelable).
+  `detail` carries `{ direction, from, source }`.
+- SSR-safe: `createSpatialNavigation()` returns a no-op facade when `document`
+  is undefined; framework adapters render on the server without side effects.
+- No-build usage: `<script src="https://unpkg.com/spatial-nav-css"></script>`
+  loads `dist/spatial-nav.global.js` and exposes `window.SpatialNav` with the
+  framework-free surface (core + elements + dialogs + virtual + debug).
+- Node.js is only needed for repository tooling; the shipped library is
+  ES2020 browser JavaScript.
+
+## Docs
+
+- [Guide](docs/guide.md): core concepts — engine, spatial CSS surface, input
+  adapters; the mental model to read first
+- [Spatial CSS reference](docs/css-api.md): every custom property and data
+  attribute, precedence rules, inheritance and `@property` caveats
+- [JS API reference](docs/js-api.md): createSpatialNavigation options,
+  SpatialEngine, events, scoring tunables, focus restoration
+- [Framework adapters](docs/frameworks.md): React, Vue, Svelte, react-aria,
+  web components — idiomatic usage and caveats per framework
+- [Input devices](docs/input-devices.md): keyboard/gamepad/remote adapters,
+  keymaps, writing a custom InputAdapter (Steam Input, IR remotes)
+- [Recipes](docs/recipes.md): copy-paste patterns — TV rails, launcher
+  shells, modals, edge pagination, settings forms, grids, multi-region apps
+- [Virtualization](docs/virtualization.md): keeping focus stable across
+  windowed/recycled lists (TanStack Virtual and friends)
+- [Performance](docs/performance.md): getComputedStyle cost model, budgets,
+  and how to keep navigation O(visible candidates)
+- [Edge cases](docs/edge-cases.md): documented behavior at the boundaries —
+  geometry ties, zero-size rects, iframes, shadow DOM, disabled states
+
+## Optional
+
+- [llms-full.txt](llms-full.txt): all of the above concatenated into one file
+- [README](README.md): project overview, quick start, accessibility notes
+- [Contributing](CONTRIBUTING.md): repo tooling, test matrix, release flow

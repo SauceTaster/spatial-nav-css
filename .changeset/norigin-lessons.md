@@ -2,7 +2,7 @@
 'spatial-nav-css': minor
 ---
 
-Production-TV lessons adopted from studying Norigin Spatial Navigation:
+Navigation hardening for production-style TV interfaces:
 
 - Scoring: sliver overlaps no longer count as same-row alignment — overlap
   must cover ≥20% of the origin's extent (`scoring.alignedOverlapRatio`,
@@ -10,10 +10,12 @@ Production-TV lessons adopted from studying Norigin Spatial Navigation:
 - `autoRestoreFocus` (default on): when the focused element is removed,
   focus restores to the surviving container's memory → default focus →
   first focusable, debounced so re-render bursts settle first.
-- Keyboard: `throttleMs` option (time-based — TV platforms fire repeats
-  without `event.repeat`; keyup resets the gate), and activate/back now
+- Keyboard: `throttleMs` option (time-based because some TV platforms may
+  repeat without `event.repeat`; keyup resets the gate), and activate/back now
   fire once per physical press instead of machine-gunning on key repeat.
 - Press/release model: `spatial:activaterelease` with `detail.durationMs`
-  from both keyboard and gamepad enables long-press UX.
+  from both keyboard and gamepad enables long-press UX; lost input sessions
+  report `spatial:activatecancel` so transient state can be cleared.
 - New `spatial-nav-css/debug` entry: `attachDebugOverlay()` paints the
-  engine's view (focusables, container zones, current focus) for debugging.
+  approximate DOM inputs (focusables, container boxes, current focus) for
+  debugging.

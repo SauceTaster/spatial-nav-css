@@ -1,0 +1,206 @@
+.mv-root {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px var(--os-pad);
+  min-height: 0;
+}
+
+/* ----------------------------------------------------------- now playing */
+.mv-now {
+  display: grid;
+  gap: 16px;
+  padding: 16px 18px 20px;
+  border-radius: var(--os-r-lg);
+  background: var(--os-surface);
+}
+.mv-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.mv-art {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  border-radius: var(--os-r-md);
+  background: linear-gradient(155deg, hsl(206 52% 34%), hsl(206 44% 15%));
+}
+.mv-meta {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.mv-meta strong {
+  font-size: 17px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mv-meta small {
+  font-size: 12px;
+  color: var(--os-text-faint);
+}
+.mv-queue {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface-3);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.mv-queue-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--os-accent);
+}
+
+.mv-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.mv-tbtn {
+  min-width: 92px;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface-2);
+  color: var(--os-text-dim);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.mv-tbtn.is-on {
+  background: var(--os-surface-3);
+  color: var(--os-accent);
+}
+.mv-tbtn-play {
+  min-width: 92px;
+  background: var(--os-accent-strong);
+  color: #05121d;
+  font-size: 18px;
+}
+.mv-tbtn[aria-disabled='true'] {
+  opacity: 0.4;
+}
+
+/* ------------------------------------------------------------- seek bar */
+.mv-seek-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mv-time {
+  min-width: 5ch;
+  font: 12px var(--os-mono);
+  color: var(--os-text-faint);
+  text-align: center;
+}
+.mv-seek {
+  position: relative;
+  flex: 1 1 auto;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--os-surface-3);
+  cursor: pointer;
+}
+.mv-seek-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--os-accent);
+}
+.mv-seek-thumb {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translateY(-50%);
+}
+/* The engine's class is rewritten by React's next render; the attribute is not. */
+.mv-seek[data-spatial-focused] {
+  outline-offset: 6px;
+}
+.mv-seek[data-spatial-focused] .mv-seek-thumb {
+  box-shadow: 0 0 0 4px var(--spatial-focus-ring-glow);
+}
+
+/* --------------------------------------------------------------- library */
+.mv-library {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding-right: 4px;
+}
+.mv-heading {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--os-text-faint);
+  font-weight: 600;
+}
+.mv-album {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+.mv-album-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 10px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.mv-album-title small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--os-text-faint);
+}
+.mv-track {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--os-r-md);
+  background: var(--os-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.mv-track.is-current {
+  color: var(--os-accent);
+}
+.mv-track-no {
+  width: 2.5ch;
+  font: 12px var(--os-mono);
+  color: var(--os-text-faint);
+  text-align: right;
+}
+.mv-track-title {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mv-track-time {
+  font: 12px var(--os-mono);
+  color: var(--os-text-faint);
+}

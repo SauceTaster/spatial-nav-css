@@ -2,12 +2,12 @@
  * React adapter example — the idiomatic pattern, plus the focusability gotchas.
  *
  * Surfaces:
- *  - useFocusable() to make a div a spatial stop (returns {ref, focused})
+ *  - useFocusable() to configure a native button and report focus state
  *  - <SpatialContainer> zones (wrap / remember)
  *  - the EXCLUSION gotcha: a plain <div> with no useFocusable is skipped; a
  *    <button> opted out with tabindex={-1} is skipped even though it's native
- *  - autoRestoreFocus: activating a card removes it, and focus lands on a
- *    surviving neighbor with zero app code
+ *  - autoRestoreFocus: activating a card removes it, then the documented
+ *    memory → default → first-focusable fallback runs with zero app code
  *
  * The component takes no provider — main.tsx wraps it for the browser, and the
  * test wraps it with deterministic engine options. That split is what lets the
@@ -17,11 +17,12 @@ import { useState } from 'react'
 import { SpatialContainer, useFocusable } from 'spatial-nav-css/react'
 
 function Card({ id, label, onRemove }: { id: string; label: string; onRemove: () => void }) {
-  const { ref, focused } = useFocusable<HTMLButtonElement>({ onActivate: onRemove })
+  const { ref, focused } = useFocusable<HTMLButtonElement>()
   return (
     <button
       ref={ref}
       id={id}
+      onClick={onRemove}
       className="tile"
       style={focused ? { outlineOffset: '2px' } : undefined}
       data-focused={focused ? 'true' : 'false'}
@@ -67,7 +68,7 @@ export function ReactExample() {
         <h2>Cards — wrap + remember</h2>
         <p className="hint">
           Each card is a <code>useFocusable()</code> stop. <kbd>Enter</kbd>/Ⓐ removes it; the engine
-          restores focus to a neighbor (<code>autoRestoreFocus</code>). The hatched tile is a plain{' '}
+          restores focus through its fallback chain (<code>autoRestoreFocus</code>). The hatched tile is a plain{' '}
           <code>&lt;div&gt;</code> with no hook — never a stop.
         </p>
         <div className="ex-grid">

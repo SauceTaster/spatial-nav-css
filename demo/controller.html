@@ -30,6 +30,7 @@
     padding: 13px 16px; border-radius: 10px; font-size: 14px;
     background: rgba(255,255,255,0.035);
   }
+  button.row { border: 0; color: inherit; text-align: left; width: 100%; }
   .row .val { margin-left: auto; opacity: 0.75; font-size: 13px; display: flex; gap: 6px; align-items: center; }
   .chip {
     display: inline-grid; place-content: center; min-width: 22px; height: 22px;
@@ -68,33 +69,33 @@
 
 <main class="rows" data-spatial-container="remember">
   <h2>ACCESSIBILITY</h2>
-  <div class="row spatial-pop" data-focusable data-spatial-autofocus>
-    UI scale
-    <span class="val"><input type="range" min="80" max="140" value="100" tabindex="-1"></span>
-  </div>
-  <div class="row spatial-pop" data-focusable>
-    Rumble intensity
-    <span class="val"><input type="range" min="0" max="100" value="70" tabindex="-1"></span>
-  </div>
+  <label class="row">
+    <span>UI scale</span>
+    <span class="val"><input class="spatial-pop" type="range" min="80" max="140" value="100" data-spatial-autofocus></span>
+  </label>
+  <label class="row">
+    <span>Rumble intensity</span>
+    <span class="val"><input class="spatial-pop" type="range" min="0" max="100" value="70"></span>
+  </label>
 
   <h2>BINDINGS</h2>
-  <div class="row spatial-pop" data-focusable data-action="accept">
+  <button class="row spatial-pop" data-action="accept">
     Accept
     <span class="val"><span class="pad-hint chip">Ⓐ</span><span class="kbd-hint chip">↵</span></span>
-  </div>
-  <div class="row spatial-pop" data-focusable data-action="back">
+  </button>
+  <button class="row spatial-pop" data-action="back">
     Back / Cancel
     <span class="val"><span class="pad-hint chip">Ⓑ</span><span class="kbd-hint chip">Esc</span></span>
-  </div>
-  <div class="row spatial-pop" data-focusable data-action="menu">
+  </button>
+  <button class="row spatial-pop" data-action="menu">
     Quick menu
     <span class="val"><span class="pad-hint chip">☰</span><span class="kbd-hint chip">M</span></span>
-  </div>
+  </button>
 
   <h2>SYSTEM</h2>
-  <div class="row spatial-pop" data-focusable>Theme <span class="val">Forest dusk ▸</span></div>
-  <div class="row spatial-pop" data-focusable>Language <span class="val">English ▸</span></div>
-  <div class="row spatial-pop" data-focusable data-nav-down="none">About <span class="val">v0.2.0 ▸</span></div>
+  <button class="row spatial-pop">Theme <span class="val">Forest dusk ▸</span></button>
+  <button class="row spatial-pop">Language <span class="val">English ▸</span></button>
+  <button class="row spatial-pop" data-nav-down="none">About <span class="val">v0.2.0 ▸</span></button>
 </main>
 
 <aside class="pad">
@@ -121,15 +122,6 @@
     document.body.dataset.source = e.detail.source
     document.getElementById('src').textContent = e.detail.source
   })
-
-  // Rows that wrap a slider forward left/right to it while focused.
-  window.addEventListener('keydown', (e) => {
-    const focused = nav.getFocused()
-    const slider = focused?.querySelector('input[type="range"]')
-    if (!slider) return
-    if (e.key === 'ArrowLeft') { slider.stepDown(); e.stopImmediatePropagation(); e.preventDefault() }
-    if (e.key === 'ArrowRight') { slider.stepUp(); e.stopImmediatePropagation(); e.preventDefault() }
-  }, { capture: true })
 
   document.addEventListener('spatial:back', (e) => {
     if (e.defaultPrevented) return // a dialog or other layer already handled it

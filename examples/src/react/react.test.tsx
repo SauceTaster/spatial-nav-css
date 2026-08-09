@@ -68,9 +68,8 @@ describe('react example', () => {
   })
 
   it('keeps input adapters working after a StrictMode remount', () => {
-    // StrictMode runs effects mount → cleanup → mount. The provider must clean
-    // up with stop() (not destroy()), or the remount loses its input adapters
-    // and keyboard/gamepad input silently dies. Regression guard for that.
+    // StrictMode runs effects mount → cleanup → mount. Provider cleanup keeps
+    // adapter registrations while resetting engine-owned DOM/listener state.
     let nav!: SpatialNavigation
     render(
       <StrictMode>
@@ -95,7 +94,7 @@ describe('react example', () => {
   it('auto-restores focus when the focused card is removed', async () => {
     const nav = mount()
     act(() => void nav.focus('#card-2'))
-    act(() => void nav.activate()) // → onActivate → React removes card-2 from state
+    act(() => void nav.activate()) // → synthetic native click → React removes card-2 from state
     expect(document.getElementById('card-2')).toBeNull()
     // autoRestoreFocus is debounced ~100ms and MutationObserver-driven.
     await act(async () => {

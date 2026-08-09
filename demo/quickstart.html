@@ -32,6 +32,7 @@
     height: 90px; border-radius: 8px; padding: 10px;
     display: grid; align-content: end; font-size: 13px;
     background: linear-gradient(160deg, #2a475e, #1b2838);
+    border: 0; color: inherit; text-align: left;
   }
   #status {
     grid-column: 1 / -1; min-height: 1.6em;
@@ -40,6 +41,7 @@
 
   /* ---- the lesson (right column) ---- */
   .steps { display: grid; gap: 18px; align-content: start; }
+  pre b { font-weight: 400; color: #6fc1ff; }        /* the spatial bits */
   .step h2 { font-size: 13px; margin: 0 0 6px; }
   .step h2 b { color: #1a9fff; margin-right: 6px; }
   .step p { font-size: 12px; opacity: 0.65; margin: 0 0 8px; line-height: 1.5; }
@@ -50,7 +52,6 @@
     overflow-x: auto; color: #aebfcc;
   }
   pre i { font-style: normal; opacity: 0.45; }       /* comments */
-  pre b { font-weight: 400; color: #6fc1ff; }        /* the spatial bits */
   kbd { background: #1b2838; border-radius: 4px; padding: 1px 6px; font: 11px ui-monospace, monospace; }
 </style>
 </head>
@@ -61,7 +62,7 @@
   <p class="sub">
     The pane on the left is live — drive it with <kbd>←↑↓→</kbd> / a gamepad,
     <kbd>Enter</kbd>/Ⓐ to activate, <kbd>Esc</kbd>/Ⓑ for the hub. The three
-    steps on the right are the <em>entire</em> code behind it.
+    steps on the right are the minimal setup behind it.
   </p>
 </header>
 
@@ -74,12 +75,12 @@
   </nav>
 
   <div class="grid" data-spatial-container="wrap remember">
-    <div class="card spatial-pop" data-focusable>Card 1</div>
-    <div class="card spatial-pop" data-focusable>Card 2</div>
-    <div class="card spatial-pop" data-focusable>Card 3</div>
-    <div class="card spatial-pop" data-focusable>Card 4</div>
-    <div class="card spatial-pop" data-focusable>Card 5</div>
-    <div class="card spatial-pop" data-focusable>Card 6</div>
+    <button class="card spatial-pop">Card 1</button>
+    <button class="card spatial-pop">Card 2</button>
+    <button class="card spatial-pop">Card 3</button>
+    <button class="card spatial-pop">Card 4</button>
+    <button class="card spatial-pop">Card 5</button>
+    <button class="card spatial-pop">Card 6</button>
   </div>
 
   <div id="status">spatial events appear here…</div>
@@ -89,27 +90,26 @@
 <div class="steps">
   <div class="step">
     <h2><b>1</b> Mark up containers and focusables — plain HTML</h2>
-    <p>Native buttons/links/inputs already participate. Add
-       <code>data-focusable</code> to let plain divs (cards, tiles) join in.</p>
-<pre>&lt;link rel="stylesheet" href="spatial-nav-css/spatial.css"&gt;
-
-&lt;nav <b>data-spatial-container="remember"</b>&gt;   <i>&lt;!-- restores focus on re-entry --&gt;</i>
+    <p>Common native controls participate automatically. Prefer native buttons
+       and links so semantics and Tab behavior work without extra code.</p>
+<pre>&lt;nav <b>data-spatial-container="remember"</b>&gt;   <i>&lt;!-- restores focus on re-entry --&gt;</i>
   &lt;button <b>data-spatial-autofocus</b>&gt;Home&lt;/button&gt;
   &lt;button&gt;Library&lt;/button&gt;
   &lt;button&gt;Settings&lt;/button&gt;
 &lt;/nav&gt;
 
 &lt;div class="grid" <b>data-spatial-container="wrap remember"</b>&gt;
-  &lt;div class="card spatial-pop" <b>data-focusable</b>&gt;Card 1&lt;/div&gt;
+  &lt;button class="card spatial-pop"&gt;Card 1&lt;/button&gt;
   <i>…</i>
 &lt;/div&gt;</pre>
   </div>
 
   <div class="step">
     <h2><b>2</b> Start the engine — three lines of JS</h2>
-    <p>Keyboard arrows and every connected gamepad now move focus spatially.
+    <p>Keyboard arrows and browser-exposed standard-mapped gamepads now move focus spatially.
        React to navigation through bubbling DOM events.</p>
 <pre><b>import { createSpatialNavigation } from 'spatial-nav-css'</b>
+<b>import 'spatial-nav-css/css'</b>
 
 const nav = createSpatialNavigation({ autofocus: true })
 nav.start()
@@ -124,7 +124,7 @@ document.addEventListener(<b>'spatial:back'</b>,     e =&gt; { <i>/* Esc / Ⓑ *
     <h2><b>3</b> (Optional) Configure through CSS instead</h2>
     <p>Every knob is also a custom property, so it can live in your stylesheet,
        a media query, or a theme. Data attributes win when both are set.</p>
-<pre>.modal    { <b>--spatial-container: contain;</b> }        <i>/* trap focus inside  */</i>
+<pre>.modal    { <b>--spatial-container: contain;</b> }        <i>/* contain spatial movement */</i>
 .carousel { <b>--spatial-container: wrap remember;</b> }
 .bottom-row button { <b>--nav-down: none;</b> }           <i>/* block a direction   */</i>
 .search   { <b>--nav-up: "#logo";</b> }                   <i>/* explicit override   */</i>

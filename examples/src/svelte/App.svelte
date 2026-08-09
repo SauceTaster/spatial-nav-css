@@ -4,7 +4,7 @@
   Surfaces:
    - createSpatialNav() → { nav, focused (store), destroy }
    - use:spatialContainer action to mark a zone
-   - use:focusable action on cards, with onActivate
+   - use:focusable action on native buttons, with ordinary click handlers
    - the `focused` store to drive styling ($focused)
    - EXCLUSION gotcha: a plain element with no action is skipped; a
      tabindex="-1" button is skipped
@@ -67,7 +67,8 @@
           class="tile"
           id={c.id}
           data-focused={$focused?.id === c.id ? 'true' : 'false'}
-          use:focusable={{ onActivate: () => remove(c.id, c.label) }}
+          use:focusable
+          onclick={() => remove(c.id, c.label)}
         >
           {c.label}
           <span class="tag">{$focused?.id === c.id ? '◉ focused — Enter removes' : 'card'}</span>

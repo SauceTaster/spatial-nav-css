@@ -11,8 +11,10 @@ import {
 import {
   DEFAULT_FOCUSABLE_SELECTOR,
   getFocusables,
-  isElementVisible,
   isHTMLElementNode,
+  isRendered,
+  isSemanticallyNavigable,
+  matchesFocusableSelector,
   ownerDocumentOf,
 } from './dom'
 import { containerChain, findContainer, type NavConfigCache, readNavConfig } from './config'
@@ -31,7 +33,8 @@ export interface EngineOptions {
   visibilityFilter?: (el: HTMLElement) => boolean
   /**
    * Scroll behavior when focus moves. `false` disables scrolling entirely.
-   * Defaults to 'smooth', degraded to instant under prefers-reduced-motion.
+   * Defaults to 'auto'. Use 'smooth' to opt in; it becomes 'instant' under
+   * prefers-reduced-motion.
    */
   scrollBehavior?: ScrollBehavior | false
   /** Class applied to the focused element (gamepad focus isn't :focus-visible). */
@@ -54,6 +57,8 @@ export interface FocusMoveDetail {
   direction?: Direction | null
   from?: HTMLElement | null
   source?: string
+  /** The move came from a held control rather than a discrete press. */
+  repeat?: boolean
 }
 
 interface ScopeCandidate {
@@ -80,25 +85,88 @@ export class SpatialEngine {
   private currentChain: HTMLElement[] = []
   private restoreTimer: ReturnType<typeof setTimeout> | null = null
   private removalObserver: MutationObserver | null = null
+  /** tabindex attributes added by the engine, restored by destroy(). */
+  private readonly managedTabIndexes = new Set<HTMLElement>()
   /** One-shot guard for the collapsed-rect dev diagnostic (see diagnoseNoTarget). */
   private warnedCollapse = false
   private readonly onFocusIn = (event: FocusEvent): void => {
     const target = event.target
-    if (!isHTMLElementNode(target) || target === this.current) return
-    if (!this.rootContains(target) || !target.matches(this.selector)) return
-    this.adopt(target)
+    if (!isHTMLElementNode(target)) return
+    // Any real focus move cancels a pending removal restore, including focus
+    // that intentionally moved to another navigation region.
+    this.cancelRestore()
+    // An application handler for this same event may already have moved focus
+    // on — a menu redirecting entry to its first item, for instance. React
+    // dispatches from its root container, *below* this document-level
+    // listener, so that redirect runs first and adopting the event's original
+    // target here would strand the focus ring on an element that no longer
+    // holds DOM focus. The redirect raises its own focusin, which adopts.
+    if (this.resolveActiveElement() !== target) return
+    if (
+      this.rootContains(target) &&
+      (target === this.current || matchesFocusableSelector(target, this.selector))
+    ) {
+      this.adopt(target)
+    } else {
+      // Keep the last spatial position for a later resume, but do not leave a
+      // second visible focus ring while another control/region owns DOM focus.
+      this.undecorate(this.current)
+    }
   }
   private started = false
 
   constructor(options: EngineOptions = {}) {
-    this.root = options.root ?? document
+    const root = options.root ?? (typeof document !== 'undefined' ? document : null)
+    if (!root) {
+      throw new Error(
+        'SpatialEngine requires a DOM root. Pass { root } in a browser environment; ' +
+          'use createSpatialNavigation() for an SSR-safe facade.',
+      )
+    }
+    this.root = root
     this.doc = ownerDocumentOf(this.root)
     this.selector = options.focusableSelector ?? DEFAULT_FOCUSABLE_SELECTOR
+    try {
+      this.root.querySelector(this.selector)
+    } catch {
+      throw new TypeError('EngineOptions.focusableSelector must be a valid CSS selector')
+    }
     this.scoring = { ...DEFAULT_SCORING, ...options.scoring }
+    for (const [name, value] of Object.entries(this.scoring)) {
+      if (!Number.isFinite(value) || value < 0) {
+        throw new RangeError(`EngineOptions.scoring.${name} must be a finite non-negative number`)
+      }
+    }
+    if (this.scoring.alignedOverlapRatio > 1) {
+      throw new RangeError('EngineOptions.scoring.alignedOverlapRatio must be between 0 and 1')
+    }
     this.getRect = options.getRect ?? ((el) => toNavRect(el.getBoundingClientRect()))
-    this.isVisible = options.visibilityFilter ?? isElementVisible
-    this.scrollBehavior = options.scrollBehavior ?? 'smooth'
-    this.focusClass = options.focusClass ?? 'spatial-focused'
+    // The semantic policy (aria-hidden / inert / hidden / open modal) is
+    // enforced unconditionally: a custom filter augments it, it does not
+    // replace it. Every portaled overlay library keeps focus inside its
+    // modal by aria-hiding the rest of the page, so a replaceable policy
+    // meant supplying a filter silently let navigation reach controls behind
+    // an open dialog.
+    const rendered = options.visibilityFilter ?? isRendered
+    this.isVisible = (el) => isSemanticallyNavigable(el) && rendered(el)
+    const scrollBehavior = options.scrollBehavior ?? 'auto'
+    if (
+      scrollBehavior !== false &&
+      scrollBehavior !== 'auto' &&
+      scrollBehavior !== 'instant' &&
+      scrollBehavior !== 'smooth'
+    ) {
+      throw new TypeError("EngineOptions.scrollBehavior must be false, 'auto', 'instant', or 'smooth'")
+    }
+    this.scrollBehavior = scrollBehavior
+    const focusClass = options.focusClass ?? 'spatial-focused'
+    try {
+      if (typeof focusClass !== 'string') throw new TypeError()
+      this.doc.createElement('div').classList.add(focusClass)
+    } catch {
+      throw new TypeError('EngineOptions.focusClass must be one non-empty DOM class token')
+    }
+    this.focusClass = focusClass
     this.autoRestore = options.autoRestoreFocus ?? true
   }
 
@@ -106,14 +174,42 @@ export class SpatialEngine {
     if (this.started) return
     this.started = true
     this.doc.addEventListener('focusin', this.onFocusIn)
-    if (this.autoRestore && typeof MutationObserver !== 'undefined') {
-      this.removalObserver = new MutationObserver(() => {
-        if (this.current && !this.current.isConnected) this.scheduleRestore()
+    const Observer = this.doc.defaultView?.MutationObserver
+    if (this.autoRestore && Observer) {
+      this.removalObserver = new Observer(() => {
+        this.pruneManagedTabIndexes()
+        // Disabling the focused control strands the user just as removal
+        // does — `getFocused()` starts reporting null and the next press
+        // restarts from the top — and "the button you pressed disables
+        // itself while it works" is an extremely common admin-UI shape.
+        // Watching one attribute costs far less than the confusion.
+        if (this.current && !this.isEligibleSpatialTarget(this.current)) this.scheduleRestore()
+        // The mirror image: an overlay finishing its exit transition removes
+        // the aria-hidden it put on the page, and the element that already
+        // holds DOM focus becomes navigable again — but no focus event fires
+        // to say so. Adopt it rather than letting the restore fallback drag
+        // the user to the first focusable on the page.
+        else if (!this.current) this.adoptActiveElement()
       })
-      this.removalObserver.observe(this.root, { childList: true, subtree: true })
+      this.removalObserver.observe(this.root, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['disabled', 'aria-hidden', 'inert', 'hidden'],
+      })
     }
+    this.adoptActiveElement()
+  }
+
+  /** Adopt whatever already holds DOM focus, when it is a valid target. */
+  private adoptActiveElement(): void {
     const active = this.resolveActiveElement()
-    if (isHTMLElementNode(active) && this.rootContains(active) && active.matches(this.selector)) {
+    if (
+      isHTMLElementNode(active) &&
+      this.rootContains(active) &&
+      matchesFocusableSelector(active, this.selector) &&
+      this.isVisible(active)
+    ) {
       this.adopt(active)
     }
   }
@@ -129,9 +225,13 @@ export class SpatialEngine {
 
   destroy(): void {
     this.stop()
-    this.current?.classList.remove(this.focusClass)
+    this.undecorate(this.current)
     this.current = null
     this.currentChain = []
+    for (const el of this.managedTabIndexes) {
+      if (el.getAttribute('tabindex') === '-1') el.removeAttribute('tabindex')
+    }
+    this.managedTabIndexes.clear()
   }
 
   private cancelRestore(): void {
@@ -141,12 +241,37 @@ export class SpatialEngine {
     }
   }
 
+  private pruneManagedTabIndexes(): void {
+    for (const el of this.managedTabIndexes) {
+      if (el.isConnected && this.rootContains(el)) continue
+      if (el.getAttribute('tabindex') === '-1') el.removeAttribute('tabindex')
+      this.managedTabIndexes.delete(el)
+    }
+  }
+
   private scheduleRestore(): void {
     this.cancelRestore()
     this.restoreTimer = setTimeout(() => {
       this.restoreTimer = null
-      // Reconnected, or focus already landed somewhere on its own — stand down.
-      if (this.current?.isConnected || this.getFocused()) return
+      // Usable again inside this root, or focus already landed somewhere on
+      // its own (including another scoped engine) — stand down. Eligibility,
+      // not mere connectivity: a control that disabled itself is still in
+      // the document but can no longer hold spatial focus, and a browser
+      // that blurs it leaves the user with nothing.
+      const current = this.current
+      const usable =
+        !!current &&
+        current.isConnected &&
+        this.rootContains(current) &&
+        this.isEligibleSpatialTarget(current)
+      if (usable) return
+      const active = this.resolveActiveElement()
+      const hasRealFocus =
+        isHTMLElementNode(active) &&
+        active !== this.doc.body &&
+        active !== this.doc.documentElement &&
+        active !== current
+      if (hasRealFocus) return
       this.restoreFocus()
     }, AUTO_RESTORE_DELAY_MS)
   }
@@ -154,8 +279,8 @@ export class SpatialEngine {
   /**
    * The focused element is gone: bring focus back to the nearest surviving
    * ancestor container — its memory, then its declared default focus, then
-   * its first focusable — falling back to the root's entry point. The
-   * Panorama/TV rule: the focus ring never just vanishes.
+   * its first focusable — falling back to the root's entry point. Restoration
+   * can still fail when no surviving eligible target exists.
    */
   private restoreFocus(): void {
     const detail: FocusMoveDetail = { source: 'restore' }
@@ -163,13 +288,13 @@ export class SpatialEngine {
       if (!container.isConnected || !this.rootContains(container)) continue
       const remembered = this.memory.get(container)
       if (
-        remembered?.isConnected &&
+        this.isEligibleSpatialTarget(remembered) &&
         container.contains(remembered) &&
-        this.isVisible(remembered) &&
         this.focus(remembered, detail)
       ) {
         return
       }
+      if (remembered) this.memory.delete(container)
       const preferred = this.findDefaultFocus(container, new Map())
       if (preferred && this.focus(preferred, detail)) return
       const first = this.collectFocusables(container)[0]
@@ -191,17 +316,18 @@ export class SpatialEngine {
   getFocused(): HTMLElement | null {
     const active = this.resolveActiveElement()
     if (isHTMLElementNode(active) && active !== this.doc.body && active !== this.doc.documentElement) {
-      if (this.rootContains(active) && (active === this.current || active.matches(this.selector))) {
+      if (
+        this.rootContains(active) &&
+        !active.matches(':disabled') &&
+        this.isVisible(active) &&
+        (active === this.current || matchesFocusableSelector(active, this.selector))
+      ) {
         // Real DOM focus is the source of truth. Resync if we missed the
         // focusin (focus events don't fire in unfocused/hidden windows).
         if (active !== this.current) this.adopt(active)
         return active
       }
-      if (this.rootContains(active)) {
-        // Focus is inside our root on something we don't recognize (another
-        // library's focus management) — keep our last known position.
-        return this.validCurrent()
-      }
+      this.undecorate(this.current)
       // Focus genuinely lives outside this root (another region, an input):
       // this engine doesn't own focus right now.
       return null
@@ -211,25 +337,41 @@ export class SpatialEngine {
   }
 
   private validCurrent(): HTMLElement | null {
-    return this.current?.isConnected && this.isVisible(this.current) ? this.current : null
+    return this.current?.isConnected &&
+      this.rootContains(this.current) &&
+      !this.current.matches(':disabled') &&
+      this.isVisible(this.current)
+      ? this.current
+      : null
   }
 
-  /** Move focus in a direction. Returns true if focus moved. */
-  navigate(dir: Direction, source = 'api'): boolean {
+  /**
+   * Move focus in a direction. Returns true if focus moved.
+   *
+   * `repeat` marks a move produced by a held control; it is carried on the
+   * resulting events so an application can implement accelerated scrolling
+   * without re-deriving key-repeat state the adapter already tracks.
+   */
+  navigate(dir: Direction, source = 'api', repeat = false): boolean {
     const origin = this.getFocused()
-    if (!origin) return this.focusFirst({ direction: dir, source })
+    if (!origin) return this.focusFirst({ direction: dir, source, repeat })
     const target = this.findTarget(dir, origin)
     if (!target) {
       this.diagnoseNoTarget()
-      dispatchSpatialEvent(origin, 'spatial:nofocustarget', { direction: dir, from: origin, source })
+      dispatchSpatialEvent(origin, 'spatial:nofocustarget', {
+        direction: dir,
+        from: origin,
+        source,
+        repeat,
+      })
       return false
     }
-    return this.focus(target, { direction: dir, from: origin, source })
+    return this.focus(target, { direction: dir, from: origin, source, repeat })
   }
 
   /**
    * Dev-only, one-time diagnostic for a silent-death failure mode surfaced by
-   * real embeddings (CEF / preview iframes reporting a 0 or unknown viewport):
+   * embeddings such as CEF / preview iframes reporting a 0 or unknown viewport:
    * when focusables are sized or animated with raw vw/vh they can all collapse
    * to the same ~0px rect, so every candidate classifies as "nowhere" and a
    * navigation finds nothing — with no error and no event payload to explain
@@ -266,14 +408,14 @@ export class SpatialEngine {
   /**
    * Resolve the element navigation would move to, without moving.
    *
-   * Search is scoped the way css-nav-1 scoped it: within the current
+   * The hierarchy is inspired by css-nav-1 scope concepts: within the current
    * container, sibling containers compete as single candidates (one rect per
    * zone — a sidebar, a header, a carousel). Once a zone wins, the search
-   * descends into it. This is what keeps "right from the sidebar" landing in
-   * the content area rather than on whatever stray element is diagonally
-   * nearest.
+   * descends into it. This keeps "right from the sidebar" biased toward the
+   * content area instead of an unrelated diagonal element.
    */
   findTarget(dir: Direction, from: HTMLElement): HTMLElement | null {
+    if (!from.isConnected || !this.rootContains(from) || !this.isVisible(from)) return null
     // One config cache per navigation pass: getComputedStyle dominates the
     // engine's cost, so each element is read at most once per keypress.
     const cache: NavConfigCache = new Map()
@@ -284,14 +426,14 @@ export class SpatialEngine {
       if (override === 'none') return null
       let el: HTMLElement | null = null
       try {
-        el = (this.root instanceof Document ? this.root : this.root).querySelector<HTMLElement>(override)
+        el = this.root.querySelector<HTMLElement>(override)
       } catch {
         // A malformed selector blocks the direction rather than throwing —
         // a loudly-broken override must not crash the input path.
         return null
       }
       // An override resolving to the origin itself is a no-op, not a move.
-      return el && el !== from && this.isVisible(el) ? el : null
+      return el && el !== from && this.isEligibleSpatialTarget(el) ? el : null
     }
 
     const fromRect = this.getRect(from)
@@ -305,12 +447,17 @@ export class SpatialEngine {
 
       if (!scope) return null
       const scopeConfig = readNavConfig(scope, cache)
-      // Wrap only when the container actually has items behind us on this
-      // axis — i.e. we're at the end of a row/column, not merely pressing
-      // orthogonally to the container's layout direction.
+      // Wrap only when the container actually has items strictly behind us
+      // on this axis — i.e. we're at the end of a row/column, not merely
+      // pressing orthogonally to the container's layout direction. The
+      // 'beyond' tier is required: the looser 'overlapping' tier would let a
+      // same-row sibling that sits a few pixels off-axis (baseline
+      // alignment, mixed card heights) count as "behind us" for an
+      // orthogonal press, turning "down" in a horizontal row into a
+      // sideways wrap instead of an exit.
       if (
         scopeConfig.wrap &&
-        candidates.some((c) => classifyDirection(fromRect, c.rect, OPPOSITE[dir]) !== null)
+        candidates.some((c) => classifyDirection(fromRect, c.rect, OPPOSITE[dir]) === 'beyond')
       ) {
         const extent = unionRects([fromRect, ...candidates.map((c) => c.rect)])
         const origin = wrapOrigin(extent, fromRect, dir)
@@ -324,27 +471,81 @@ export class SpatialEngine {
 
   /** Focus an element (or selector). Returns true if focus moved. */
   focus(target: HTMLElement | string, detail: FocusMoveDetail = {}): boolean {
-    const el =
-      typeof target === 'string'
-        ? (this.root instanceof Document ? this.root : this.root).querySelector<HTMLElement>(target)
-        : target
-    if (!el || !this.isVisible(el)) return false
+    let el: HTMLElement | null
+    try {
+      el = typeof target === 'string' ? this.root.querySelector<HTMLElement>(target) : target
+    } catch {
+      return false
+    }
+    if (!el?.isConnected || !this.rootContains(el) || el.matches(':disabled') || !this.isVisible(el)) {
+      return false
+    }
+
+    const previousActive = this.resolveActiveElement()
+    if (previousActive === el) {
+      if (this.current !== el) this.adopt(el)
+      return false
+    }
 
     const eventDetail = {
       direction: detail.direction ?? null,
       from: detail.from ?? this.current,
       source: detail.source ?? 'api',
+      repeat: detail.repeat ?? false,
     }
     if (!dispatchSpatialEvent(el, 'spatial:beforefocus', eventDetail, true)) return false
 
-    this.adopt(el)
-    if (this.doc.activeElement !== el) {
-      // Let opt-in elements (data-focusable cards) receive real DOM focus.
-      if (!el.hasAttribute('tabindex') && !el.matches('a[href], button, input, select, textarea')) {
-        el.setAttribute('tabindex', '-1')
-      }
-      el.focus({ preventScroll: true })
+    // A beforefocus handler may synchronously remove, disable, or hide the
+    // target. Revalidate before touching DOM focus.
+    if (!el.isConnected || !this.rootContains(el) || el.matches(':disabled') || !this.isVisible(el)) {
+      return false
     }
+
+    // Let opt-in/custom elements receive real DOM focus without turning them
+    // into sequential Tab stops. Track only attributes we add ourselves.
+    const addedTabIndex = !el.hasAttribute('tabindex') && el.tabIndex < 0
+    if (addedTabIndex) {
+      // With autoRestoreFocus off there is no MutationObserver to prune this
+      // set, so removed nodes would be retained until destroy(). Pruning on
+      // each addition keeps it bounded by the connected stops instead.
+      this.pruneManagedTabIndexes()
+      this.managedTabIndexes.add(el)
+      el.setAttribute('tabindex', '-1')
+    }
+    try {
+      el.focus({ preventScroll: true })
+    } catch {
+      if (addedTabIndex) {
+        el.removeAttribute('tabindex')
+        this.managedTabIndexes.delete(el)
+      }
+      return false
+    }
+    // `HTMLElement.focus()` is allowed to do nothing, and composite widgets
+    // may synchronously redirect focus from their root to an eligible child.
+    const actual = this.resolveActiveElement()
+    if (actual !== el) {
+      if (addedTabIndex) {
+        el.removeAttribute('tabindex')
+        this.managedTabIndexes.delete(el)
+      }
+      if (
+        actual === previousActive ||
+        !isHTMLElementNode(actual) ||
+        !actual.isConnected ||
+        !this.rootContains(actual) ||
+        actual.matches(':disabled') ||
+        !this.isVisible(actual)
+      ) {
+        return false
+      }
+      this.adopt(actual)
+      this.scrollTo(actual)
+      dispatchSpatialEvent(actual, 'spatial:focus', eventDetail)
+      return true
+    }
+
+    this.adopt(el)
     this.scrollTo(el)
     dispatchSpatialEvent(el, 'spatial:focus', eventDetail)
     return true
@@ -352,7 +553,19 @@ export class SpatialEngine {
 
   /** Focus the root's default-focus element, else the first focusable. */
   focusFirst(detail: FocusMoveDetail = {}): boolean {
-    const preferred = this.findDefaultFocus(this.root, new Map())
+    const cache: NavConfigCache = new Map()
+    if (isHTMLElementNode(this.root) && readNavConfig(this.root, cache).remember) {
+      const remembered = this.memory.get(this.root)
+      if (
+        this.isEligibleSpatialTarget(remembered) &&
+        this.root.contains(remembered) &&
+        this.focus(remembered, detail)
+      ) {
+        return true
+      }
+      if (remembered && !this.isEligibleSpatialTarget(remembered)) this.memory.delete(this.root)
+    }
+    const preferred = this.findDefaultFocus(this.root, cache)
     if (preferred && this.focus(preferred, detail)) return true
     const first = this.collectFocusables(this.root)[0]
     return first ? this.focus(first, detail) : false
@@ -376,14 +589,30 @@ export class SpatialEngine {
    * Announce release of the activate control (long-press detection lives in
    * the app: check detail.durationMs on 'spatial:activaterelease').
    */
-  activateRelease(durationMs: number, source = 'api'): boolean {
-    const el = this.getFocused()
-    if (!el) return false
+  activateRelease(
+    durationMs: number,
+    source = 'api',
+    target: HTMLElement | null = this.getFocused(),
+  ): boolean {
+    const el = target
+    if (!el?.isConnected || !this.rootContains(el)) return false
     dispatchSpatialEvent(el, 'spatial:activaterelease', {
       direction: null,
       from: el,
       source,
       durationMs,
+    })
+    return true
+  }
+
+  /** Announce that a matched activate press ended without a normal release. */
+  activateCancel(source = 'api', target: HTMLElement | null = this.getFocused()): boolean {
+    const el = target
+    if (!el?.isConnected || !this.rootContains(el)) return false
+    dispatchSpatialEvent(el, 'spatial:activatecancel', {
+      direction: null,
+      from: el,
+      source,
     })
     return true
   }
@@ -405,16 +634,67 @@ export class SpatialEngine {
   // --- internals ---
 
   private rootContains(el: HTMLElement): boolean {
-    return this.root instanceof Document ? this.root.contains(el) : this.root.contains(el)
+    return this.root.contains(el)
+  }
+
+  /**
+   * True when nothing has meaningfully claimed focus inside this root.
+   *
+   * That covers the obvious case — no spatial target and the document's
+   * active element still the body — plus one that is easy to miss: focus
+   * parked on an element inside this root that the engine could never focus,
+   * such as the `tabindex="-1"` wrapper a framework modal's focus trap
+   * focuses on open. Nothing owns such an element spatially, so claiming
+   * from it is safe; without this, the first direction press after opening a
+   * portaled dialog did nothing at all and the remote appeared dead.
+   *
+   * Focus resting on a genuine stop — possibly a different navigation
+   * region's — still reads as claimed, so regions never steal from each
+   * other.
+   */
+  canClaimFocus(): boolean {
+    if (this.getFocused()) return false
+    const active = this.resolveActiveElement()
+    if (!active || active === this.doc.body || active === this.doc.documentElement) return true
+    return (
+      isHTMLElementNode(active) && this.rootContains(active) && !this.isEligibleSpatialTarget(active)
+    )
+  }
+
+  private isEligibleSpatialTarget(el: HTMLElement | null | undefined): el is HTMLElement {
+    return Boolean(
+      el?.isConnected &&
+        this.rootContains(el) &&
+        matchesFocusableSelector(el, this.selector) &&
+        this.isVisible(el),
+    )
+  }
+
+  /**
+   * Focus decoration is written two ways. The class is the documented,
+   * themeable hook; the attribute is the durable one, because a framework
+   * that renders `className`/`:class` rewrites the class attribute on its
+   * next render and would otherwise erase the focus ring out from under the
+   * engine. Nothing renders `data-spatial-focused`, so it survives.
+   */
+  private decorate(el: HTMLElement): void {
+    el.classList.add(this.focusClass)
+    el.setAttribute('data-spatial-focused', '')
+  }
+
+  private undecorate(el: HTMLElement | null | undefined): void {
+    if (!el) return
+    el.classList.remove(this.focusClass)
+    el.removeAttribute('data-spatial-focused')
   }
 
   private adopt(el: HTMLElement): void {
     this.cancelRestore() // focus moved legitimately; no restore needed
     if (this.current !== el) {
-      this.current?.classList.remove(this.focusClass)
+      this.undecorate(this.current)
       this.current = el
     }
-    el.classList.add(this.focusClass)
+    this.decorate(el)
     const cache: NavConfigCache = new Map()
     this.currentChain = containerChain(el, this.root, cache)
     for (const container of this.currentChain) {
@@ -490,8 +770,16 @@ export class SpatialEngine {
       // The zone is the container's box extended over its content extent: a
       // scrollable carousel is conceptually a full band, and items scrolled
       // past its visible box must still count as part of it for alignment.
+      //
+      // Degenerate members are dropped first. A single collapsed focusable —
+      // an offscreen focus guard, a chart library's tabbable <svg> before it
+      // measures, a not-yet-laid-out virtualized row — reports a rect at the
+      // viewport origin, and unioning that stretches the whole zone up to
+      // (0, 0). Every zone-level score then shifts, silently and almost
+      // undiagnosably, in a layout that otherwise looks fine.
+      const measured = rects.filter((r) => r.width > 0 || r.height > 0)
       const box = this.getRect(container)
-      const content = unionRects(rects)
+      const content = unionRects(measured.length > 0 ? measured : rects)
       const rect = box.width <= 0 && box.height <= 0 ? content : unionRects([box, content])
       candidates.push({ element: container, rect, isGroup: true })
     }
@@ -544,8 +832,7 @@ export class SpatialEngine {
   /**
    * When navigation crosses into a container, honor the container's focus
    * memory (`remember`) or its declared default-focus child instead of the
-   * geometrically nearest element — the Panorama "sections restore where
-   * you left off" behavior.
+   * geometrically nearest element.
    */
   private resolveEntry(target: HTMLElement, from: HTMLElement, cache: NavConfigCache): HTMLElement {
     const crossed = containerChain(target, this.root, cache).filter((c) => !c.contains(from))
@@ -556,9 +843,10 @@ export class SpatialEngine {
         // Valid memory settles entry outright — even when it equals the
         // geometric target, returning it prevents the default-focus redirect
         // below from hijacking a correct re-entry.
-        if (remembered?.isConnected && container.contains(remembered) && this.isVisible(remembered)) {
+        if (this.isEligibleSpatialTarget(remembered) && container.contains(remembered)) {
           return remembered
         }
+        if (remembered) this.memory.delete(container)
       }
       const preferred = this.findDefaultFocus(container, cache)
       if (preferred && preferred !== target) return preferred
@@ -568,7 +856,7 @@ export class SpatialEngine {
 
   private findDefaultFocus(scope: ParentNode, cache?: NavConfigCache): HTMLElement | null {
     const byAttr = scope.querySelector<HTMLElement>('[data-spatial-autofocus]')
-    if (byAttr && this.isVisible(byAttr)) return byAttr
+    if (byAttr && this.isEligibleSpatialTarget(byAttr)) return byAttr
     for (const el of this.collectFocusables(scope)) {
       if (readNavConfig(el, cache).defaultFocus) return el
     }
@@ -580,7 +868,7 @@ export class SpatialEngine {
     let behavior: ScrollBehavior = this.scrollBehavior
     if (behavior === 'smooth') {
       const view = this.doc.defaultView
-      if (view?.matchMedia?.('(prefers-reduced-motion: reduce)').matches) behavior = 'auto'
+      if (view?.matchMedia?.('(prefers-reduced-motion: reduce)').matches) behavior = 'instant'
     }
     el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior })
   }
